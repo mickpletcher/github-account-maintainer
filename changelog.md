@@ -21,6 +21,8 @@ This file records every repository change, including code, documentation, config
 - Reviewed and updated `assessment.md` to record the new changelog requirement without changing the tool's runtime behavior.
 - Updated repository instructions, the README, and the assessment to require implemented upgrades to move between ledgers with evidence and a replacement future idea.
 - Moved FUT-001 to `completed-upgrades.md`, added FUT-013 policy diagnostics and exception hygiene to Tier 2, and synchronized the README and assessment.
+- Reworked the README into a novice-first guide covering prerequisites, Windows setup, minimal-permission token creation, secure credential storage, configuration, commands, policy resolution, reports, exit codes, troubleshooting, development, and the release roadmap.
+- Reviewed and updated `assessment.md` to record the documentation improvement without changing runtime behavior.
 
 ## 2026-08-10
 
