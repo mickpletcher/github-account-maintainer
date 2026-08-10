@@ -1,9 +1,12 @@
 import json
 
+from github_account_maintainer.classification import RepositoryPolicyBindingRecord
 from github_account_maintainer.models import AuthReport, InventoryReport, RepositoryAuditReport, RunReport
 
 
-def render_json(report: RunReport | AuthReport | InventoryReport | RepositoryAuditReport) -> str:
+def render_json(
+    report: RunReport | AuthReport | InventoryReport | RepositoryAuditReport | RepositoryPolicyBindingRecord,
+) -> str:
     return report.model_dump_json(indent=2)
 
 
@@ -127,4 +130,28 @@ def render_repository_audit_markdown(report: RepositoryAuditReport) -> str:
         )
     else:
         lines.append("No findings.")
+    return "\n".join(lines) + "\n"
+
+
+def render_policy_binding_markdown(record: RepositoryPolicyBindingRecord) -> str:
+    lines = [
+        "# GitHub Repository Classification and Policy Binding",
+        "",
+        f"- Repository: `{record.repository_display}`",
+        f"- Repository class: `{record.repository_class}`",
+        f"- Project type: `{record.project_type}`",
+        f"- Classification hash: `{record.classification.classification_hash}`",
+        f"- Coverage: `{record.classification.coverage_state.value}`",
+        f"- Policy hash: `{record.policy_hash}`",
+        f"- Bound: `{record.bound_at.isoformat()}`",
+        "",
+        "## Classification",
+        "",
+    ]
+    lines.extend(
+        f"- `{decision.dimension.value}`: `{decision.value}` (confidence `{decision.confidence:.2f}`)"
+        for decision in record.classification.decisions
+    )
+    lines.extend(["", "## Policy sources", ""])
+    lines.extend(f"- `{source.value}`" for source in record.policy_sources)
     return "\n".join(lines) + "\n"
