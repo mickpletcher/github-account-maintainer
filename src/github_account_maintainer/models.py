@@ -42,6 +42,22 @@ class RunStatus(StrEnum):
     PARTIAL = "partial"
 
 
+class PolicySource(StrEnum):
+    BUILT_IN = "built_in"
+    ACCOUNT = "account"
+    REPOSITORY_CLASS = "repository_class"
+    PROJECT_TYPE = "project_type"
+    REPOSITORY = "repository"
+    EXCEPTION = "exception"
+
+
+class PolicyTraceRecord(StrictModel):
+    path: str
+    source: PolicySource
+    source_key: str | None = None
+    value: JsonValue
+
+
 class CoverageRecord(StrictModel):
     repository_id: int | None = None
     check_id: str
@@ -73,6 +89,8 @@ class RunReport(StrictModel):
     started_at: datetime
     completed_at: datetime
     status: RunStatus
+    policy_hash: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    policy_trace: tuple[PolicyTraceRecord, ...] = ()
     coverage: list[CoverageRecord] = []
     findings: list[Finding] = []
 

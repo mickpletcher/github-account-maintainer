@@ -15,6 +15,8 @@ Release 0.1 is under development. This scaffold provides:
 - Authentication identity preflight through `GET /user`.
 - Paginated repository inventory through `GET /user/repos` with deduplication and terminal coverage states.
 - Minimal-detail redaction of non-public repository names and URLs.
+- Deterministic policy resolution across built-in, account, repository-class, project-type, repository, and exception layers.
+- Complete policy provenance traces plus canonical SHA-256 hashes for resolved effective policy.
 - JSON and Markdown report rendering.
 - Ruff, Pyright, pytest, coverage, and pinned GitHub Actions validation.
 
@@ -26,6 +28,8 @@ Release 0.1 is under development. This scaffold provides:
 - The automatic-write allowlist is empty.
 - Destructive operations and automatic merging are prohibited by the configuration schema.
 - Unknown configuration fields are rejected.
+- Policy layers cannot override hard safety invariants.
+- Expired or not-yet-active exceptions never suppress checks.
 - Tokens, cookies, private keys, and secret values do not belong in configuration files.
 - Default local data paths resolve outside managed repositories.
 
@@ -82,6 +86,36 @@ uv run github-account-maintainer inventory --format markdown
 
 JSON is the default output format. Minimal report detail replaces private and internal repository names with stable numeric labels and omits their URLs.
 
+## Policy resolution
+
+The local configuration accepts strict policy layers under `policy`. Later layers override earlier layers in this order: account settings, repository class, project type, repository, then matching active exceptions. Built-in safe defaults always apply first.
+
+```yaml
+policy:
+  repository_classes:
+    application:
+      security:
+        audit_code_scanning: true
+  project_types:
+    python:
+      readme:
+        validate_links: true
+  repositories:
+    owner/repository:
+      readme:
+        preserve_manual_sections: true
+  exceptions:
+    - exception_id: EXC-001
+      target_selector: owner/repository
+      check_ids: [metadata.description]
+      reason: Temporary migration window
+      creator: github-login
+      created_at: 2026-08-10T00:00:00Z
+      expires_at: 2026-09-10T00:00:00Z
+```
+
+Policy and exception fields reject unknown values. Non-permanent exceptions require RFC 3339 UTC creation and expiration timestamps. Resolution records every applied value and source, sorts exception effects deterministically, and hashes the canonical effective policy with SHA-256. The reserved `audit` command does not consume this engine until the remaining Release 0.1 checks and report workflow are implemented.
+
 ## Development
 
 ```powershell
@@ -100,8 +134,8 @@ When a tracked upgrade is implemented, move it from `future-upgrades.md` to `com
 
 ## Planned Release 0.1 work
 
-1. Deterministic policy resolution and policy hashing.
-2. Metadata and community-file checks.
-3. Schema-versioned account audit reports.
+1. Metadata and community-file checks.
+2. Schema-versioned account audit reports.
+3. Read-only Release 0.1 pilot verification.
 
 No remediation work begins until the read-only Release 0.1 gate passes.

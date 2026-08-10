@@ -2,11 +2,11 @@
 
 **Last reviewed:** 2026-08-10  
 **Current release:** `0.1.0.dev0`  
-**Overall status:** Read-only authentication and repository inventory are functional. The complete Release 0.1 audit workflow is not finished.
+**Overall status:** Read-only authentication, repository inventory, and deterministic policy resolution are functional. The complete Release 0.1 audit workflow is not finished.
 
 ## Quick overview
 
-GitHub Account Maintainer is a local-first Python CLI for auditing GitHub account resources against an explicit policy. It currently verifies the configured GitHub identity, inventories repositories visible to a discovery credential, records coverage and permissions, redacts non-public repository identities by default, and produces JSON or Markdown reports.
+GitHub Account Maintainer is a local-first Python CLI for auditing GitHub account resources against an explicit policy. It currently verifies the configured GitHub identity, inventories repositories visible to a discovery credential, resolves strict layered policy with provenance and a stable hash, records coverage and permissions, redacts non-public repository identities by default, and produces JSON or Markdown reports.
 
 The implemented GitHub path is serial and GET-only. It cannot modify repositories, account settings, branches, pull requests, security settings, or other GitHub resources.
 
@@ -27,6 +27,10 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Authenticated identity validation with credential values excluded from reports and errors.
 - Same-origin URL, redirect, and pagination validation to prevent credential forwarding to another host.
 - Repository inventory with affiliation and visibility declarations, pagination, deduplication, permission capture, timestamps, and terminal coverage states.
+- Strict policy patches for account, repository-class, project-type, repository-specific, and exception layers.
+- Deterministic policy precedence with a trace of every built-in and overridden value.
+- Canonical SHA-256 hashes over effective policy and applicable exception state.
+- Validation and deterministic handling for active, expired, pending, and permanent exceptions.
 - Minimal report mode that replaces private and internal repository names with stable numeric labels and removes their URLs.
 - Structured JSON and Markdown authentication and inventory reports.
 - Stable CLI exit codes: `0` for success, `2` for incomplete or operational failure, and `3` for invalid configuration or input. Exit code `1` is reserved for completed audits with findings above the configured threshold.
@@ -36,6 +40,8 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - The GitHub API client exposes only GET operations.
 - The automatic-write allowlist is empty.
 - Automatic merge and destructive operations are prohibited by the configuration schema.
+- Policy patches do not expose safety controls, so repository policy and exceptions cannot override hard safety invariants.
+- Expired, pending, unmatched, and invalid exceptions cannot suppress checks.
 - Credentials are resolved at runtime and are never written to configuration or report payloads.
 - Transport and keyring errors are reduced to safe error classes without raw backend details.
 - Private and internal repository names and URLs are redacted unless full report detail is explicitly enabled.
@@ -44,9 +50,9 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 
 ## Known limitations
 
-- Deterministic policy inheritance, explanation traces, and stable policy hashes are not implemented.
 - Metadata and community-file audits are not implemented.
 - The account-level `audit` report and finding evaluation workflow are not implemented.
+- The policy engine is not yet connected to the reserved account-level `audit` command.
 - Repository classification is limited to inventory fields such as visibility, archive state, fork state, and effective permissions.
 - No state database, scheduling, planning, approval, remediation, rollback, browser automation, backup, or notification workflow is implemented.
 - The tool does not yet satisfy the complete Release 0.1 local pilot gate in the project specification.
@@ -56,7 +62,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Ruff lint passes.
 - Ruff formatting checks pass.
 - Strict Pyright checks pass with no errors.
-- Pytest passes 70 tests with 95.65% total coverage.
+- Pytest passes 81 tests with 95.76% total coverage.
 - The lockfile is reproducible with `uv lock --check`.
 - GitHub Actions uses read-only permissions, pinned action SHAs, non-persistent checkout credentials, stale-run cancellation, and a job timeout.
 - CodeQL scans Python and GitHub Actions sources.
@@ -67,10 +73,9 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 
 ## Next priorities
 
-1. Implement deterministic policy resolution, explanation traces, and policy hashing.
-2. Add read-only repository metadata and community-file checks.
-3. Implement the account-level audit command with findings and complete coverage reporting.
-4. Validate the full Release 0.1 gate with read-only integration fixtures and a local pilot.
+1. Add read-only repository metadata and community-file checks.
+2. Implement the account-level audit command with findings and complete coverage reporting.
+3. Validate the full Release 0.1 gate with read-only integration fixtures and a local pilot.
 
 ## Required maintenance
 
@@ -78,4 +83,4 @@ Every repository change must update this file and `changelog.md` in the same com
 
 When an upgrade is implemented, move its stable ID from `future-upgrades.md` to `completed-upgrades.md`, record the delivery and verification evidence, and add at least one new upgrade idea to the future backlog in the same pull request.
 
-**Latest assessment change:** Added the three-tier future upgrade backlog, completed upgrade ledger, and synchronization rules. The tool capability assessment remains accurate and runtime behavior is unchanged.
+**Latest assessment change:** Implemented FUT-001 deterministic policy resolution, explanation traces, exception state handling, and stable policy hashing. The GitHub execution path remains read-only.

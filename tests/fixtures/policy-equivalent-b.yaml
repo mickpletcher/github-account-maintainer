@@ -1,0 +1,22 @@
+exceptions:
+  - creator: mick
+    expires_at: 2026-09-01T00:00:00Z
+    reason: Temporary migration window
+    check_ids:
+      - community.readme
+      - metadata.description
+    target_selector: Mick/*
+    created_at: 2026-08-01T00:00:00Z
+    exception_id: EXC-001
+repositories:
+  Mick/Example:
+    security:
+      audit_code_scanning: true
+project_types:
+  python:
+    readme:
+      validate_links: false
+repository_classes:
+  application:
+    security:
+      audit_code_scanning: false

@@ -12,7 +12,14 @@ This file is the permanent record of upgrades completed from `future-upgrades.md
 
 ## Completed
 
-No tracked future upgrade has been completed since these ledgers were established.
+### FUT-001: Deterministic policy engine
+
+- Former tier: Tier 1, Release critical
+- Completed: 2026-08-10
+- Pull request or commit: This pull request. The final PR reference will be recorded before merge.
+- Delivered: Added strict account, repository-class, project-type, repository, and exception policy layers; deterministic precedence; full provenance traces; active, expired, and pending exception handling; canonical SHA-256 policy hashes; and run-report policy fields.
+- Verification: Equivalent YAML fixtures resolve to identical results and hashes. Ruff, formatting, strict Pyright, and 81 pytest tests pass with 95.76% coverage.
+- Replacement idea: Policy diagnostics and exception hygiene was added to Tier 2.
 
 ## Required entry format
 
