@@ -18,6 +18,7 @@ The current version is deliberately read-only. It can verify a GitHub identity, 
 - [Verify authentication](#verify-authentication)
 - [Inventory repositories](#inventory-repositories)
 - [Command reference](#command-reference)
+- [Repository check foundation](#repository-check-foundation)
 - [Configuration guide](#configuration-guide)
 - [Policy resolution](#policy-resolution)
 - [Reports and exit codes](#reports-and-exit-codes)
@@ -37,7 +38,7 @@ The package version is `0.1.0.dev0`. Release 0.1 is still under development.
 | Inventory accessible repositories | Implemented | Calls paginated `GET /user/repos` requests. |
 | Redact private repository identities | Implemented | Enabled by the default `minimal` report detail. |
 | Resolve layered policy | Implemented foundation | Deterministic library code exists, but the reserved `audit` command does not use it yet. |
-| Audit metadata and community files | Not implemented | Planned next. |
+| Audit metadata and community files | Implemented foundation | Deterministic repository checks and reports exist. The account-level command is not connected yet. |
 | Apply GitHub changes | Not implemented | No GitHub mutation endpoint exists. |
 | Full Release 0.1 audit | Not implemented | The `audit` command exits with code `2`. |
 
@@ -45,7 +46,7 @@ This status matters. A successful inventory does not mean the account passed a f
 
 ## What the tool does
 
-The current CLI can:
+The implemented code can:
 
 - Create a local YAML configuration with safe defaults.
 - Load credentials from Windows Credential Manager through Python `keyring`.
@@ -62,6 +63,10 @@ The current CLI can:
 - Record where every resolved policy value came from.
 - Create a canonical SHA-256 hash for the effective policy.
 - Validate active, expired, pending, and permanent policy exceptions.
+- Evaluate repository description, homepage, topic count, primary language, visibility, and archive state.
+- Detect eight common community files through GitHub's community-profile and contents metadata endpoints without cloning or reading file content.
+- Distinguish compliant, noncompliant, observed, unknown, and inaccessible outcomes with a terminal coverage state for every check.
+- Produce privacy-safe repository findings with stable check IDs, exact current and desired states, evidence, severity, and remediation class.
 
 ## What the tool does not do
 
@@ -73,8 +78,8 @@ The current version does not:
 - Enable or disable GitHub security features.
 - Dismiss security alerts.
 - Clone repository content during inventory.
-- Run the planned metadata and community-file audit.
-- Apply the resolved policy to an account audit.
+- Run metadata and community-file checks from the public CLI. The check layer currently requires library integration.
+- Apply the resolved policy across an account-wide audit.
 - Schedule unattended runs.
 - Create backups.
 - Use browser automation.
@@ -97,6 +102,7 @@ The project uses these boundaries:
 - Tokens are resolved at runtime and are not placed in reports.
 - Backend credential errors are reduced to safe error classes.
 - Private and internal repository names and URLs are redacted in `minimal` detail mode.
+- Repository checks report presence and counts. They do not store descriptions, homepage URLs, topic names, language names, file paths, or file content.
 - Default configuration, state, cache, report, log, browser, and backup-metadata paths are outside the cloned repository.
 
 Treat a personal access token like a password. Never paste it into `config.yaml`, a command history entry, an issue, a pull request, a report, or a committed file.
@@ -418,6 +424,33 @@ uv run github-account-maintainer audit
 
 This command is reserved. It prints an incomplete-implementation message and exits with code `2`. It does not run a partial audit and it does not change GitHub.
 
+## Repository check foundation
+
+FUT-002 provides the read-only repository check layer that the future account-level `audit` command will call. It is library code today. A novice user does not need to invoke Python functions directly. Wait for FUT-003 if you need one command that inventories and audits the full account.
+
+The layer performs 14 stable checks:
+
+- Metadata: `metadata.description`, `metadata.homepage`, `metadata.topics`, `metadata.primary_language`, `metadata.visibility`, and `metadata.archive_state`.
+- Community files: `community.readme`, `community.license`, `community.security`, `community.contributing`, `community.code_of_conduct`, `community.support`, `community.issue_template`, and `community.pull_request_template`.
+
+Each result records:
+
+- `outcome`: `compliant`, `noncompliant`, `observed`, `unknown`, or `inaccessible`.
+- `coverage_state`: the existing terminal coverage vocabulary, including `audited`, `inherited`, `inaccessible`, `skipped_by_policy`, and `failed`.
+- Sanitized current and desired state.
+- Count-only or presence-only evidence.
+
+Required values that are confirmed missing produce findings. Optional values are observed without producing false violations. Repository or community-profile authorization and not-found responses are treated as inaccessible. A missing directory listing is treated as an absent directory only after repository access succeeds. Malformed or operational failures are unknown and failed. An active policy exception marks its check `skipped_by_policy` and does not produce a finding.
+
+The implementation uses only these GET requests:
+
+- `GET /user` to verify the audit credential identity.
+- `GET /repos/{owner}/{repository}` for metadata.
+- `GET /repos/{owner}/{repository}/community/profile` for GitHub-recognized community files on non-forks.
+- `GET /repos/{owner}/{repository}/contents`, plus `.github` and `docs` directory listings, for file-presence metadata.
+
+It does not clone repositories or request file bodies. Inherited community files are reported with `inherited` coverage when GitHub identifies a source outside the audited repository.
+
 ## Configuration guide
 
 The configuration is strict YAML. Indentation matters. Unknown fields, invalid values, and unsafe combinations are rejected with exit code `3`.
@@ -434,6 +467,8 @@ The configuration is strict YAML. Indentation matters. Unknown fields, invalid v
 | `repositories` | Supplies account-wide repository policy defaults. Include and exclude patterns are not yet applied by inventory. |
 | `pins` | Validated policy for the planned profile-pin feature. Not active yet. |
 | `readme` | Validated policy for planned README checks and remediation. Not active yet. |
+| `metadata` | Active desired-state policy for the repository metadata check layer. |
+| `community` | Active required or optional policy for eight common community files. |
 | `social_preview` | Validated policy for planned social-preview work. Not active yet. |
 | `security` | Validated desired security audit policy. The security audit is not active yet. |
 | `backup` | Reserved and forced disabled in the current schema. |
@@ -501,7 +536,7 @@ credentials:
   browser_profile: disabled
 ```
 
-The current `auth check` and `inventory` commands use only `credentials.discovery`.
+The current `auth check` and `inventory` commands use only `credentials.discovery`. The repository check library resolves `credentials.audit`, verifies its identity with `GET /user`, and never falls back to the discovery or remediation credential.
 
 ### Report privacy
 
@@ -536,6 +571,10 @@ Example:
 policy:
   repository_classes:
     application:
+      metadata:
+        minimum_topics: 2
+      community:
+        security: required
       security:
         audit_code_scanning: true
   project_types:
@@ -580,6 +619,8 @@ Resolution produces:
 
 Equivalent policy inputs produce the same resolved result and hash. The current CLI validates this configuration, but the reserved `audit` command does not invoke the resolver yet.
 
+The built-in metadata policy requires a description, at least one topic, and a primary language. Homepage is optional. The built-in community policy requires README, LICENSE, and SECURITY files. CONTRIBUTING, CODE_OF_CONDUCT, SUPPORT, issue templates, and pull request templates are optional unless a matching policy layer makes them required.
+
 ## Reports and exit codes
 
 ### Output formats
@@ -588,6 +629,8 @@ Equivalent policy inputs produce the same resolved result and hash. The current 
 
 - `json`: Machine-readable output. This is the default.
 - `markdown`: Human-readable output.
+
+The repository check library also has schema-versioned JSON and Markdown renderers. Its report includes the policy hash, sanitized repository display name, credential source, accepted GitHub permissions, all results, terminal coverage, and findings. FUT-003 will expose those reports through the account-level CLI.
 
 ### Exit codes
 
@@ -758,9 +801,8 @@ When a tracked upgrade is implemented:
 
 The remaining Release 0.1 work is:
 
-1. Implement read-only repository metadata and community-file checks.
-2. Implement schema-versioned account audit reports and finding evaluation.
-3. Connect repository classification and policy resolution to the audit workflow.
-4. Validate the complete read-only Release 0.1 gate with contract fixtures and a local pilot.
+1. Connect repository classification and resolved policy to the account audit workflow.
+2. Implement the schema-versioned account-level `audit` command and documented exit behavior.
+3. Validate the complete read-only Release 0.1 gate with contract fixtures and a local pilot.
 
 No remediation work begins until the read-only Release 0.1 gate passes.

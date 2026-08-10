@@ -1,9 +1,9 @@
 import json
 
-from github_account_maintainer.models import AuthReport, InventoryReport, RunReport
+from github_account_maintainer.models import AuthReport, InventoryReport, RepositoryAuditReport, RunReport
 
 
-def render_json(report: RunReport | AuthReport | InventoryReport) -> str:
+def render_json(report: RunReport | AuthReport | InventoryReport | RepositoryAuditReport) -> str:
     return report.model_dump_json(indent=2)
 
 
@@ -92,4 +92,39 @@ def render_inventory_markdown(report: InventoryReport) -> str:
         f"- `{record.check_id}`: `{record.state.value}`" + (f" ({record.detail})" if record.detail else "")
         for record in report.coverage
     )
+    return "\n".join(lines) + "\n"
+
+
+def render_repository_audit_markdown(report: RepositoryAuditReport) -> str:
+    lines = [
+        "# GitHub Repository Audit",
+        "",
+        f"- Repository: `{report.repository_display}`",
+        f"- Status: `{report.status.value}`",
+        f"- Policy hash: `{report.policy_hash}`",
+        f"- GitHub API version: `{report.github_api_version}`",
+        f"- Started: `{report.started_at.isoformat()}`",
+        f"- Completed: `{report.completed_at.isoformat()}`",
+        "",
+        "## Results",
+        "",
+    ]
+    if report.results:
+        lines.extend(
+            f"- `{result.check_id}`: `{result.outcome.value}` (`{result.coverage_state.value}`)"
+            for result in report.results
+        )
+    else:
+        lines.append("No check results.")
+
+    lines.extend(["", "## Findings", ""])
+    if report.findings:
+        lines.extend(
+            f"- **{finding.severity.value}** `{finding.check_id}`: "
+            f"current={json.dumps(finding.current_state, ensure_ascii=False)}; "
+            f"desired={json.dumps(finding.desired_state, ensure_ascii=False)}"
+            for finding in report.findings
+        )
+    else:
+        lines.append("No findings.")
     return "\n".join(lines) + "\n"

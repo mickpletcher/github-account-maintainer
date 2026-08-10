@@ -1,0 +1,23 @@
+{
+  "health_percentage": 100,
+  "files": {
+    "readme": {
+      "url": "https://api.github.com/repos/example/synthetic/contents/README.md"
+    },
+    "license": {
+      "url": "https://api.github.com/repos/example/synthetic/license"
+    },
+    "contributing": {
+      "url": "https://api.github.com/repos/example/synthetic/contents/CONTRIBUTING.md"
+    },
+    "code_of_conduct_file": {
+      "url": "https://api.github.com/repos/example/synthetic/contents/CODE_OF_CONDUCT.md"
+    },
+    "issue_template": {
+      "url": "https://api.github.com/repos/example/synthetic/contents/.github/ISSUE_TEMPLATE/bug.yml"
+    },
+    "pull_request_template": {
+      "url": "https://api.github.com/repos/example/synthetic/contents/.github/PULL_REQUEST_TEMPLATE.md"
+    }
+  }
+}

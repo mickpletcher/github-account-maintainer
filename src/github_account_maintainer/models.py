@@ -22,6 +22,14 @@ class CoverageState(StrEnum):
     FAILED = "failed"
 
 
+class CheckOutcome(StrEnum):
+    COMPLIANT = "compliant"
+    NONCOMPLIANT = "noncompliant"
+    OBSERVED = "observed"
+    UNKNOWN = "unknown"
+    INACCESSIBLE = "inaccessible"
+
+
 class Severity(StrEnum):
     INFORMATIONAL = "informational"
     LOW = "low"
@@ -79,6 +87,18 @@ class Finding(StrictModel):
     remediation_class: RemediationClass
     documentation_url: str | None = None
     observed_at: datetime
+
+
+class CheckResult(StrictModel):
+    repository_id: int
+    repository_display: str
+    check_id: str
+    category: str
+    outcome: CheckOutcome
+    coverage_state: CoverageState
+    current_state: JsonValue
+    desired_state: JsonValue
+    evidence: tuple[str, ...] = ()
 
 
 class RunReport(StrictModel):
@@ -145,3 +165,20 @@ class InventoryReport(StrictModel):
     accepted_permissions: tuple[str, ...] = ()
     repositories: tuple[RepositoryInventoryRecord, ...] = ()
     coverage: tuple[CoverageRecord, ...] = ()
+
+
+class RepositoryAuditReport(StrictModel):
+    schema_version: Literal["1.0"] = REPORT_SCHEMA_VERSION
+    tool_version: str
+    github_api_version: str
+    repository_id: int
+    repository_display: str
+    credential_source: str
+    started_at: datetime
+    completed_at: datetime
+    status: RunStatus
+    policy_hash: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    accepted_permissions: tuple[str, ...] = ()
+    results: tuple[CheckResult, ...] = ()
+    coverage: tuple[CoverageRecord, ...] = ()
+    findings: tuple[Finding, ...] = ()

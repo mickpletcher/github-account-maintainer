@@ -1,0 +1,11 @@
+{
+  "health_percentage": 0,
+  "files": {
+    "readme": null,
+    "license": null,
+    "contributing": null,
+    "code_of_conduct_file": null,
+    "issue_template": null,
+    "pull_request_template": null
+  }
+}
