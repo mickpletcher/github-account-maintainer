@@ -26,7 +26,7 @@ github-account-maintainer = "github_account_maintainer.cli:main"
 dev = [
   "pyright>=1.1.403,<2",
   "pytest>=9.0.3,<10",
-  "pytest-cov>=6.2.1,<7",
+  "pytest-cov>=7.1.0,<8",
   "ruff>=0.12.4,<1",
 ]
 
