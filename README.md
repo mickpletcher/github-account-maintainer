@@ -11,10 +11,14 @@ Release 0.1 is under development. This scaffold provides:
 - Strict coverage, finding, and report models.
 - A REST client foundation pinned to GitHub API version `2026-03-10`.
 - Serial, GET-only REST access with same-origin pagination and redirect validation.
+- Read-only credential resolution through Windows Credential Manager or an explicitly named environment variable.
+- Authentication identity preflight through `GET /user`.
+- Paginated repository inventory through `GET /user/repos` with deduplication and terminal coverage states.
+- Minimal-detail redaction of non-public repository names and URLs.
 - JSON and Markdown report rendering.
 - Ruff, Pyright, pytest, coverage, and pinned GitHub Actions validation.
 
-`auth check`, `inventory`, and `audit` are reserved commands and currently exit with code `2`. They do not call GitHub yet. Authentication and repository inventory are the next implementation slice.
+`audit` remains reserved and exits with code `2`. Authentication and inventory are read-only. No GitHub mutation endpoint is implemented.
 
 ## Safety boundaries
 
@@ -50,6 +54,28 @@ uv run github-account-maintainer init --login YOUR_GITHUB_LOGIN --output C:\Loca
 
 Existing configuration files are not overwritten unless `--overwrite` is supplied.
 
+Store the discovery credential in Windows Credential Manager through Python keyring:
+
+```powershell
+uv run keyring set github-account-maintainer discovery
+```
+
+The default configuration references `keyring:github-account-maintainer/discovery`. It does not contain the token. For an ephemeral development session, change the reference to `env:GITHUB_TOKEN` and provide that environment variable outside the repository.
+
+Verify the authenticated identity:
+
+```powershell
+uv run github-account-maintainer auth check
+```
+
+Inventory repositories within the configured affiliations:
+
+```powershell
+uv run github-account-maintainer inventory --format markdown
+```
+
+JSON is the default output format. Minimal report detail replaces private and internal repository names with stable numeric labels and omits their URLs.
+
 ## Development
 
 ```powershell
@@ -64,10 +90,8 @@ The CI workflow runs the same checks on pull requests and pushes to `main`.
 
 ## Planned Release 0.1 work
 
-1. Read-only credential resolution and authentication preflight.
-2. Paginated repository inventory with declared coverage states.
-3. Deterministic policy resolution and policy hashing.
-4. Metadata and community-file checks.
-5. Schema-versioned account reports.
+1. Deterministic policy resolution and policy hashing.
+2. Metadata and community-file checks.
+3. Schema-versioned account audit reports.
 
 No remediation work begins until the read-only Release 0.1 gate passes.

@@ -12,6 +12,7 @@ license = "MIT"
 authors = [{ name = "Mick Pletcher" }]
 dependencies = [
   "httpx>=0.28.1,<1",
+  "keyring>=25.6.0,<26",
   "platformdirs>=4.3.8,<5",
   "pydantic>=2.11.7,<3",
   "PyYAML>=6.0.2,<7",
@@ -52,4 +53,4 @@ target-version = "py312"
 select = ["B", "E", "F", "I", "S", "SIM", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]
+"tests/**" = ["S101", "S105"]

@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import yaml
 from platformdirs import user_data_path
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from github_account_maintainer.constants import APP_NAME, GITHUB_API_VERSION
 
@@ -25,6 +25,22 @@ class AccountConfig(StrictModel):
     include_administered: bool = False
     affiliations: list[Literal["owner", "collaborator", "organization_member"]] = ["owner"]
 
+    @field_validator("github_host")
+    @classmethod
+    def validate_github_host(cls, value: str) -> str:
+        if not value or any(character in value for character in ("://", "/", "\\", "@", " ")):
+            raise ValueError("github_host must be a hostname without a scheme or path")
+        return value
+
+    @model_validator(mode="after")
+    def validate_affiliations(self) -> "AccountConfig":
+        if self.include_owned != ("owner" in self.affiliations):
+            raise ValueError("include_owned must match the owner affiliation")
+        administered = "collaborator" in self.affiliations or "organization_member" in self.affiliations
+        if self.include_administered != administered:
+            raise ValueError("include_administered must match collaborator or organization_member affiliation")
+        return self
+
 
 class GitHubApiConfig(StrictModel):
     rest_api_version: Literal["2026-03-10"] = GITHUB_API_VERSION
@@ -33,11 +49,18 @@ class GitHubApiConfig(StrictModel):
 
 
 class CredentialConfig(StrictModel):
-    discovery: str = "github-account-maintainer/discovery"
-    audit: str = "github-account-maintainer/audit"
+    discovery: str = "keyring:github-account-maintainer/discovery"
+    audit: str = "keyring:github-account-maintainer/audit"
     remediation: str = "disabled"
     classic_token: Literal["disabled"] = "disabled"  # noqa: S105
     browser_profile: str = "disabled"
+
+    @field_validator("discovery", "audit", "remediation", "browser_profile")
+    @classmethod
+    def validate_reference(cls, value: str) -> str:
+        if value == "disabled" or value.startswith(("env:", "keyring:")):
+            return value
+        raise ValueError("Credential values must be disabled or use an env: or keyring: reference")
 
 
 class LocalDataConfig(StrictModel):

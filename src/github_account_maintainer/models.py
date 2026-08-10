@@ -75,3 +75,55 @@ class RunReport(StrictModel):
     status: RunStatus
     coverage: list[CoverageRecord] = []
     findings: list[Finding] = []
+
+
+class AuthReport(StrictModel):
+    schema_version: Literal["1.0"] = REPORT_SCHEMA_VERSION
+    tool_version: str
+    github_api_version: str
+    configured_login: str
+    authenticated_login: str
+    authenticated_user_id: int
+    credential_source: str
+    oauth_scopes: tuple[str, ...] = ()
+    accepted_oauth_scopes: tuple[str, ...] = ()
+    accepted_permissions: str | None = None
+    rate_limit_remaining: int | None = None
+    checked_at: datetime
+
+
+class RepositoryPermissions(StrictModel):
+    admin: bool | None = None
+    maintain: bool | None = None
+    push: bool | None = None
+    triage: bool | None = None
+    pull: bool | None = None
+
+
+class RepositoryInventoryRecord(StrictModel):
+    repository_id: int
+    node_id: str
+    display_name: str
+    private: bool
+    visibility: Literal["public", "private", "internal"]
+    archived: bool
+    fork: bool
+    html_url: str | None = None
+    permissions: RepositoryPermissions
+
+
+class InventoryReport(StrictModel):
+    schema_version: Literal["1.0"] = REPORT_SCHEMA_VERSION
+    tool_version: str
+    github_api_version: str
+    account_display: str
+    credential_source: str
+    declared_affiliations: tuple[str, ...]
+    started_at: datetime
+    completed_at: datetime
+    status: RunStatus
+    pages_read: int
+    duplicates_removed: int
+    accepted_permissions: tuple[str, ...] = ()
+    repositories: tuple[RepositoryInventoryRecord, ...] = ()
+    coverage: tuple[CoverageRecord, ...] = ()

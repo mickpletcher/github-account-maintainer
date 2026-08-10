@@ -32,6 +32,30 @@ def test_hard_safety_invariant_cannot_be_enabled() -> None:
         AppConfig.model_validate(raw)
 
 
+def test_literal_credential_value_is_rejected() -> None:
+    raw = default_config("mickpletcher").model_dump(mode="json")
+    raw["credentials"]["discovery"] = "github-token-value"
+
+    with pytest.raises(ValidationError):
+        AppConfig.model_validate(raw)
+
+
+def test_affiliation_flags_must_match_declared_affiliations() -> None:
+    raw = default_config("mickpletcher").model_dump(mode="json")
+    raw["account"]["include_administered"] = True
+
+    with pytest.raises(ValidationError):
+        AppConfig.model_validate(raw)
+
+
+def test_github_host_rejects_scheme_or_path() -> None:
+    raw = default_config("mickpletcher").model_dump(mode="json")
+    raw["account"]["github_host"] = "https://github.example.com/path"
+
+    with pytest.raises(ValidationError):
+        AppConfig.model_validate(raw)
+
+
 def test_config_round_trip(tmp_path: Path) -> None:
     path = tmp_path / "config.yaml"
     expected = default_config("mickpletcher")
