@@ -175,6 +175,39 @@ def test_resolved_hash_changes_when_effective_policy_changes() -> None:
     assert default_result.policy_hash != changed_result.policy_hash
 
 
+def test_metadata_and_community_requirements_follow_policy_precedence() -> None:
+    hierarchy = PolicyHierarchyConfig.model_validate(
+        {
+            "repository_classes": {
+                "library": {
+                    "metadata": {"minimum_topics": 2},
+                    "community": {"security": "optional"},
+                }
+            },
+            "repositories": {"mick/example": {"community": {"security": "required"}}},
+        }
+    )
+    config = default_config("mick").model_copy(update={"policy": hierarchy})
+
+    resolved = resolve_policy(
+        config,
+        PolicyTarget(
+            repository="mick/example",
+            repository_class="library",
+            evaluated_at=EVALUATED_AT,
+        ),
+    )
+
+    assert resolved.settings.metadata.minimum_topics == 2
+    assert resolved.settings.community.security == "required"
+    entries = [entry for entry in resolved.trace if entry.path == "community.security"]
+    assert [(entry.source, entry.value) for entry in entries] == [
+        (PolicySource.BUILT_IN, "required"),
+        (PolicySource.REPOSITORY_CLASS, "optional"),
+        (PolicySource.REPOSITORY, "required"),
+    ]
+
+
 def _config_from_fixture(name: str) -> AppConfig:
     raw = yaml.safe_load((FIXTURES / name).read_text(encoding="utf-8"))
     hierarchy = PolicyHierarchyConfig.model_validate(raw)

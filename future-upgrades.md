@@ -19,9 +19,9 @@ Priority can change as the project develops. Moving an unimplemented item betwee
 
 These upgrades directly unblock the read-only Release 0.1 gate.
 
-### FUT-002: Metadata and community-file audit checks
+### FUT-014: Repository classification and policy binding
 
-Add read-only checks for repository metadata and required community files. Every check must report explicit coverage and distinguish compliant, noncompliant, unknown, and inaccessible results.
+Classify repositories from deterministic inventory and metadata evidence, record classification confidence, and bind each repository to the correct resolved policy before account-wide audit aggregation.
 
 ### FUT-003: Account audit command and schema reports
 

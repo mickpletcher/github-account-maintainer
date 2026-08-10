@@ -132,6 +132,24 @@ class ReadmeConfig(StrictModel):
     private_ai_provider: Literal["disabled"] = "disabled"
 
 
+class MetadataConfig(StrictModel):
+    description: Literal["required", "optional"] = "required"
+    homepage: Literal["required", "optional"] = "optional"
+    minimum_topics: NonNegativeInt = 1
+    primary_language: Literal["required", "optional"] = "required"
+
+
+class CommunityConfig(StrictModel):
+    readme: Literal["required", "optional"] = "required"
+    license: Literal["required", "optional"] = "required"
+    security: Literal["required", "optional"] = "required"
+    contributing: Literal["required", "optional"] = "optional"
+    code_of_conduct: Literal["required", "optional"] = "optional"
+    support: Literal["required", "optional"] = "optional"
+    issue_template: Literal["required", "optional"] = "optional"
+    pull_request_template: Literal["required", "optional"] = "optional"
+
+
 class SocialPreviewConfig(StrictModel):
     enabled: bool = True
     default_path: Path = Path(".github/social-preview.png")
@@ -195,6 +213,24 @@ class ReadmePolicyPatch(StrictModel):
     private_ai_provider: Literal["disabled"] | None = None
 
 
+class MetadataPolicyPatch(StrictModel):
+    description: Literal["required", "optional"] | None = None
+    homepage: Literal["required", "optional"] | None = None
+    minimum_topics: NonNegativeInt | None = None
+    primary_language: Literal["required", "optional"] | None = None
+
+
+class CommunityPolicyPatch(StrictModel):
+    readme: Literal["required", "optional"] | None = None
+    license: Literal["required", "optional"] | None = None
+    security: Literal["required", "optional"] | None = None
+    contributing: Literal["required", "optional"] | None = None
+    code_of_conduct: Literal["required", "optional"] | None = None
+    support: Literal["required", "optional"] | None = None
+    issue_template: Literal["required", "optional"] | None = None
+    pull_request_template: Literal["required", "optional"] | None = None
+
+
 class SocialPreviewPolicyPatch(StrictModel):
     enabled: bool | None = None
     default_path: Path | None = None
@@ -224,6 +260,8 @@ class PolicySettingsPatch(StrictModel):
     repositories: RepositoryPolicyPatch | None = None
     pins: PinPolicyPatch | None = None
     readme: ReadmePolicyPatch | None = None
+    metadata: MetadataPolicyPatch | None = None
+    community: CommunityPolicyPatch | None = None
     social_preview: SocialPreviewPolicyPatch | None = None
     security: SecurityPolicyPatch | None = None
     notifications: NotificationPolicyPatch | None = None
@@ -309,6 +347,8 @@ class AppConfig(StrictModel):
     repositories: RepositoryConfig = RepositoryConfig()
     pins: PinConfig = PinConfig()
     readme: ReadmeConfig = ReadmeConfig()
+    metadata: MetadataConfig = MetadataConfig()
+    community: CommunityConfig = CommunityConfig()
     social_preview: SocialPreviewConfig = SocialPreviewConfig()
     security: SecurityConfig = SecurityConfig()
     backup: BackupConfig = BackupConfig()

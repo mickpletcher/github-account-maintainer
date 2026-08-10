@@ -1,0 +1,14 @@
+[
+  {
+    "type": "file",
+    "path": "README.md"
+  },
+  {
+    "type": "file",
+    "path": "LICENSE"
+  },
+  {
+    "type": "file",
+    "path": "CONTRIBUTING.md"
+  }
+]

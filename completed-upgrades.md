@@ -12,6 +12,15 @@ This file is the permanent record of upgrades completed from `future-upgrades.md
 
 ## Completed
 
+### FUT-002: Metadata and community-file audit checks
+
+- Former tier: Tier 1, Release critical
+- Completed: 2026-08-10
+- Pull request or commit: This pull request
+- Delivered: Added 14 deterministic GET-only repository checks for metadata and common community files; separate audit-credential identity verification; layered required and optional policy; compliant, noncompliant, observed, unknown, and inaccessible outcomes; explicit terminal coverage; privacy-safe findings; inherited-file detection; and schema-versioned JSON and Markdown repository reports.
+- Verification: Synthetic GitHub REST fixtures cover compliant, missing, inherited, inaccessible, malformed, suppressed, redacted, credential-isolated, and GET-only behavior. Ruff, formatting, strict Pyright, pytest, and ledger-uniqueness validation pass with at least 95% coverage.
+- Replacement idea: Repository classification and policy binding was added to Tier 1.
+
 ### FUT-001: Deterministic policy engine
 
 - Former tier: Tier 1, Release critical

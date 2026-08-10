@@ -9,6 +9,8 @@ from pydantic import Field, JsonValue, field_validator
 
 from github_account_maintainer.config import (
     AppConfig,
+    CommunityConfig,
+    MetadataConfig,
     NotificationConfig,
     PinConfig,
     PolicyExceptionConfig,
@@ -28,6 +30,8 @@ class PolicySettings(StrictModel):
     repositories: RepositoryConfig = RepositoryConfig()
     pins: PinConfig = PinConfig()
     readme: ReadmeConfig = ReadmeConfig()
+    metadata: MetadataConfig = MetadataConfig()
+    community: CommunityConfig = CommunityConfig()
     social_preview: SocialPreviewConfig = SocialPreviewConfig()
     security: SecurityConfig = SecurityConfig()
     notifications: NotificationConfig = NotificationConfig()
@@ -87,6 +91,8 @@ def resolve_policy(config: AppConfig, target: PolicyTarget) -> ResolvedPolicy:
             repositories=config.repositories,
             pins=config.pins,
             readme=config.readme,
+            metadata=config.metadata,
+            community=config.community,
             social_preview=config.social_preview,
             security=config.security,
             notifications=config.notifications,

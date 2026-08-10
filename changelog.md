@@ -6,6 +6,11 @@ This file records every repository change, including code, documentation, config
 
 ### Added
 
+- Added FUT-002 repository checks for description, homepage, topic count, primary language, visibility, archive state, and eight common community files.
+- Added explicit compliant, noncompliant, observed, unknown, and inaccessible results with terminal coverage for every repository check.
+- Added privacy-safe repository findings and schema-versioned JSON and Markdown report models that omit repository metadata values, repository file URLs and paths, and file content.
+- Added strict layered metadata and community-file policy settings with required and optional requirements.
+- Added synthetic GitHub REST contract fixtures and tests for compliant, noncompliant, inherited, inaccessible, failed, suppressed, credential-isolated, redacted, and GET-only behavior.
 - Added this changelog and backfilled the complete repository history through PR #6.
 - Added `future-upgrades.md` with three priority tiers, stable upgrade IDs, and an initial backlog aligned with the project specification.
 - Added `completed-upgrades.md` as the permanent record for implemented and verified backlog items.
@@ -17,6 +22,8 @@ This file records every repository change, including code, documentation, config
 
 ### Changed
 
+- Moved FUT-002 to `completed-upgrades.md`, added FUT-014 repository classification and policy binding to Tier 1, and synchronized the README and assessment.
+- Documented the repository check foundation, audit-credential boundary, policy defaults, outcome vocabulary, report contents, privacy behavior, and remaining account-audit work.
 - Updated repository instructions and the README to require changelog maintenance for every change.
 - Reviewed and updated `assessment.md` to record the new changelog requirement without changing the tool's runtime behavior.
 - Updated repository instructions, the README, and the assessment to require implemented upgrades to move between ledgers with evidence and a replacement future idea.
