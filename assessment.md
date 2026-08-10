@@ -62,6 +62,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - CodeQL scans Python and GitHub Actions sources.
 - Dependabot monitors uv and GitHub Actions dependencies.
 - `main` requires a pull request, passing validation, passing CodeQL security thresholds, linear history, and resolved review threads.
+- Every repository change is required to update this assessment and `changelog.md` in the same commit or pull request.
 
 ## Next priorities
 
@@ -72,6 +73,6 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 
 ## Required maintenance
 
-Every repository change must update this file in the same commit or pull request. Review the quick overview, command status, capabilities, limitations, verification results, and next priorities. If a change does not affect tool behavior, update the review date and record that the assessment remains accurate.
+Every repository change must update this file and `changelog.md` in the same commit or pull request. Review the quick overview, command status, capabilities, limitations, verification results, and next priorities. If a change does not affect tool behavior, update the review date and record that the assessment remains accurate.
 
-**Latest assessment change:** Created the assessment as the required quick overview and repository change companion.
+**Latest assessment change:** Added mandatory changelog maintenance and confirmed that the tool capability assessment remains accurate.
