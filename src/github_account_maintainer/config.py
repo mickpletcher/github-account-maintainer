@@ -1,16 +1,29 @@
 import os
+import re
 from pathlib import Path
 from typing import Annotated, Literal
 from uuid import uuid4
 
 import yaml
 from platformdirs import user_data_path
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from github_account_maintainer.constants import APP_NAME, GITHUB_API_VERSION
 
 PositiveInt = Annotated[int, Field(gt=0)]
 NonNegativeInt = Annotated[int, Field(ge=0)]
+
+
+def _valid_credential_reference(value: str) -> bool:
+    scheme, separator, target = value.partition(":")
+    if not separator or not target:
+        return False
+    if scheme == "env":
+        return True
+    if scheme == "keyring":
+        service, account_separator, account = target.rpartition("/")
+        return bool(account_separator and service and account)
+    return False
 
 
 class StrictModel(BaseModel):
@@ -25,6 +38,22 @@ class AccountConfig(StrictModel):
     include_administered: bool = False
     affiliations: list[Literal["owner", "collaborator", "organization_member"]] = ["owner"]
 
+    @field_validator("github_host")
+    @classmethod
+    def validate_github_host(cls, value: str) -> str:
+        if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?", value):
+            raise ValueError("github_host must be a hostname without a scheme or path")
+        return value
+
+    @model_validator(mode="after")
+    def validate_affiliations(self) -> "AccountConfig":
+        if self.include_owned != ("owner" in self.affiliations):
+            raise ValueError("include_owned must match the owner affiliation")
+        administered = "collaborator" in self.affiliations or "organization_member" in self.affiliations
+        if self.include_administered != administered:
+            raise ValueError("include_administered must match collaborator or organization_member affiliation")
+        return self
+
 
 class GitHubApiConfig(StrictModel):
     rest_api_version: Literal["2026-03-10"] = GITHUB_API_VERSION
@@ -33,11 +62,25 @@ class GitHubApiConfig(StrictModel):
 
 
 class CredentialConfig(StrictModel):
-    discovery: str = "github-account-maintainer/discovery"
-    audit: str = "github-account-maintainer/audit"
+    discovery: str = "keyring:github-account-maintainer/discovery"
+    audit: str = "keyring:github-account-maintainer/audit"
     remediation: str = "disabled"
     classic_token: Literal["disabled"] = "disabled"  # noqa: S105
     browser_profile: str = "disabled"
+
+    @field_validator("discovery", "audit")
+    @classmethod
+    def validate_required_reference(cls, value: str) -> str:
+        if _valid_credential_reference(value):
+            return value
+        raise ValueError("Credential value must use env:NAME or keyring:SERVICE/ACCOUNT")
+
+    @field_validator("remediation", "browser_profile")
+    @classmethod
+    def validate_optional_reference(cls, value: str) -> str:
+        if value == "disabled" or _valid_credential_reference(value):
+            return value
+        raise ValueError("Credential value must be disabled or use env:NAME or keyring:SERVICE/ACCOUNT")
 
 
 class LocalDataConfig(StrictModel):

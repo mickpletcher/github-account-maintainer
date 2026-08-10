@@ -2,7 +2,12 @@ import httpx
 import pytest
 
 from github_account_maintainer.constants import GITHUB_API_VERSION
-from github_account_maintainer.github_api import GitHubApiClient, accepted_permissions
+from github_account_maintainer.github_api import (
+    GitHubApiClient,
+    GitHubApiError,
+    GitHubTransportError,
+    accepted_permissions,
+)
 
 
 def test_get_sets_required_headers_without_exposing_token() -> None:
@@ -104,3 +109,37 @@ def test_paginate_requires_array_payload() -> None:
 
     with GitHubApiClient("test-token", transport=transport) as client, pytest.raises(TypeError, match="JSON array"):
         list(client.paginate("/user/repos"))
+
+
+@pytest.mark.parametrize(
+    ("status_code", "headers", "kind"),
+    [
+        (401, {}, "authentication"),
+        (403, {}, "authorization"),
+        (403, {"X-RateLimit-Remaining": "0"}, "rate_limit"),
+        (429, {"Retry-After": "60"}, "rate_limit"),
+        (404, {}, "not_found"),
+        (500, {}, "server"),
+        (422, {}, "api_error"),
+    ],
+)
+def test_get_classifies_api_failures(status_code: int, headers: dict[str, str], kind: str) -> None:
+    transport = httpx.MockTransport(lambda _request: httpx.Response(status_code, headers=headers, json={}))
+
+    with GitHubApiClient("test-token", transport=transport) as client, pytest.raises(GitHubApiError) as error:
+        client.get("/user")
+
+    assert error.value.kind == kind
+
+
+def test_get_redacts_transport_failure() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("private transport detail", request=request)
+
+    with (
+        GitHubApiClient("test-token", transport=httpx.MockTransport(handler)) as client,
+        pytest.raises(GitHubTransportError, match="ConnectError") as error,
+    ):
+        client.get("/user")
+
+    assert "private transport detail" not in str(error.value)
