@@ -1,13 +1,13 @@
 # GitHub Account Maintainer Project Specification
 
-**Status:** Approved scope, ready for implementation planning  
+**Status:** Approved product scope; Release 0.1 implementation contract defined
 **Owner:** Mick Pletcher  
 **Last updated:** 2026-08-10  
 **Repository name:** `github-account-maintainer`  
 
 ## 1. Product Summary
 
-GitHub Account Maintainer is a policy-driven automation system that audits and maintains an entire GitHub account. It keeps profile pins, repository settings, security controls, About metadata, documentation, social-preview graphics, dependencies, CI workflows, releases, backups, and repository lifecycle state aligned with a configurable standard.
+GitHub Account Maintainer is a policy-driven automation system that audits and maintains GitHub resources within explicitly declared API, credential, repository, and plan coverage. It keeps profile pins, repository settings, security controls, About metadata, documentation, social-preview graphics, dependencies, CI workflows, releases, backups, and repository lifecycle state aligned with a configurable standard.
 
 The system is audit-first and fail-closed. It may automatically apply only changes explicitly classified as safe by policy. Repository content changes are proposed through pull requests. Destructive, access-related, billable, or potentially breaking changes require explicit approval and are never silently applied.
 
@@ -17,17 +17,17 @@ The system is audit-first and fail-closed. It may automatically apply only chang
 
 ### Tagline
 
-> Automated maintenance and governance for your entire GitHub account.
+> Automated maintenance and governance across your accessible GitHub account resources.
 
 ## 2. Goals
 
-1. Maintain a complete inventory of repositories accessible to the configured GitHub account.
+1. Maintain a complete inventory of repositories visible to the configured discovery credential and report the limits of that coverage.
 2. Detect configuration, security, documentation, dependency, CI, release, and profile drift.
-3. Apply safe, reversible corrections automatically when policy permits.
+3. Apply explicitly allowlisted, verified corrections when policy and an immutable plan permit.
 4. Propose repository-file changes through clear, evidence-backed pull requests.
 5. Require approval for risky or potentially disruptive changes.
 6. Keep the GitHub profile and repository presentation accurate and current.
-7. Provide account-wide health scoring, reports, history, and rollback information.
+7. Provide coverage-aware health scoring, reports, history, and best-effort rollback information for supported operations.
 8. Back up repository content and relevant GitHub metadata.
 9. Bootstrap newly created repositories with the correct baseline.
 10. Remain extensible as GitHub adds or changes features.
@@ -53,15 +53,17 @@ These capabilities may be integrated later through separate, explicitly authoriz
 - **Idempotent:** Repeated runs against a compliant account create no changes or duplicate pull requests.
 - **Fail closed:** Unknown API responses, unsupported plans, authentication failures, or UI changes stop remediation.
 - **Least privilege:** Audit and remediation credentials are separated whenever practical.
+- **Coverage is explicit:** Every run reports which resources and checks were audited, unsupported, inaccessible, skipped, or not requested.
 - **Evidence over inference:** Documentation claims must be supported by repository content or flagged for review.
-- **Reversible:** Settings changes retain before-and-after snapshots and rollback instructions.
+- **Verified and recoverable:** Supported settings changes retain before-and-after snapshots, verification results, and best-effort rollback instructions. A snapshot is never represented as a guarantee that GitHub will accept a later rollback.
 - **Low noise:** One consolidated maintenance pull request per repository, with cooldowns and duplicate detection.
 - **Policy driven:** Global defaults, repository-class policies, and per-repository exceptions are version controlled.
 - **Private by default:** Private repository content is not sent to an external AI provider without explicit configuration.
+- **Untrusted input:** Repository files, API text, issue content, workflow output, and generated content are data, not instructions. They cannot expand permissions, change policy, approve plans, or trigger writes.
 
 ## 5. Repository Discovery and Classification
 
-GitHub Account Maintainer must enumerate all repositories that the authenticated account owns and optionally repositories where it has administrative access.
+GitHub Account Maintainer must enumerate all repositories returned by the configured user-scoped discovery credential. Discovery uses GitHub's authenticated-user repository listing with explicit affiliations and pagination. GitHub App installation tokens are used only for repositories granted to the installation and must not be treated as proof of account-wide completeness.
 
 Each repository is classified using the following dimensions:
 
@@ -81,6 +83,19 @@ Each repository is classified using the following dimensions:
 - Empty repositories receive a classification report and bootstrap recommendation.
 - Private repositories receive deterministic local audits; external AI analysis is disabled unless explicitly allowed.
 
+### Discovery and coverage contract
+
+Each inventory records:
+
+- Authenticated account identity and GitHub host.
+- Discovery credential type without storing the credential value.
+- Requested affiliations, visibility, organizations, include patterns, and exclude patterns.
+- Every pagination cursor or page boundary required to establish completeness.
+- Repository ownership, effective viewer permission, and whether a configured execution credential can access the repository.
+- Collection start and completion timestamps and any checkpoint used to resume.
+
+Every repository and check receives exactly one coverage state: `audited`, `unsupported`, `unavailable_by_plan`, `inherited`, `inaccessible`, `skipped_by_policy`, `not_requested`, or `failed`. A run is complete only when every requested repository and check has a terminal coverage state. The product must say "complete within declared coverage" rather than "complete account audit."
+
 ## 6. Policy Inheritance
 
 Policy is resolved in this order, with later levels overriding earlier levels:
@@ -92,7 +107,11 @@ Policy is resolved in this order, with later levels overriding earlier levels:
 5. Repository-specific overrides.
 6. Time-limited exceptions.
 
-Exceptions must contain a reason, creator, creation date, and optional expiration date. Expired exceptions become findings.
+The policy schema rejects unknown fields and incompatible combinations. Resolution is deterministic, emits an explanation trace, and produces a canonical SHA-256 policy hash stored with every run and plan. Built-in defaults contain no automatically writable operations.
+
+Hard safety invariants are not policy switches and cannot be overridden by repository policy or exceptions. These include no automatic merge; no deletion of repositories, releases, branches, tags, credentials, packages, collaborators, keys, or webhooks; no unattended visibility, ownership, archive, or default-branch changes; no security-alert dismissal; no secret-value collection; and no approval based only on a finding ID.
+
+Exceptions must contain a stable exception ID, target selector, check IDs, reason, creator, creation timestamp, and mandatory expiration timestamp unless explicitly marked permanent. Timestamps use RFC 3339 UTC. Expired exceptions become findings and no longer suppress results.
 
 ## 7. Operating Modes
 
@@ -102,9 +121,9 @@ GitHub Account Maintainer exposes the following operating modes:
 | --- | --- | --- |
 | `audit` | Inventory and evaluate the account | None |
 | `plan` | Produce exact proposed changes and diffs | None |
-| `apply-safe` | Apply policy-approved, reversible settings changes | Safe writes only |
+| `apply-safe` | Apply an exact policy-approved plan whose operations are in the automatic-write allowlist | Allowlisted writes only |
 | `open-prs` | Create or update consolidated maintenance pull requests | Branch and PR writes |
-| `apply-approved` | Apply previously approved sensitive changes | Approved writes only |
+| `apply-approved` | Apply a previously approved immutable plan | Approved writes only |
 | `pins-sync` | Synchronize profile pins through the local UI adapter | Profile-pin changes |
 | `previews-sync` | Upload merged social-preview assets through the local UI adapter | Social-preview changes |
 | `backup` | Back up repositories and metadata | Backup-destination writes |
@@ -116,7 +135,7 @@ GitHub Account Maintainer exposes the following operating modes:
 | Change category | Default handling |
 | --- | --- |
 | Inventory, scoring, and reports | Automatic, read-only |
-| Clearly safe metadata and nonbreaking settings | Automatic only after policy enables the rule |
+| Metadata and nonbreaking settings | Plan only until the exact operation is added to the automatic-write allowlist and enabled by policy |
 | README, documentation, templates, configuration, graphics, and workflow files | Pull request |
 | Security feature enablement | Explicit policy approval and plan/feature support checks |
 | Actions permission changes | Approval required unless an exact safe baseline was previously approved |
@@ -126,6 +145,23 @@ GitHub Account Maintainer exposes the following operating modes:
 | Repository, release, branch, tag, credential, or package deletion | Never automatic |
 | Security-alert dismissal | Never automatic |
 | Profile pins and social-preview assignment | Local browser adapter with dry-run and verification |
+
+### Operation catalog and immutable plans
+
+Every mutating capability is registered in an operation catalog with a stable operation ID, required credential type and permissions, risk class, planner, preconditions, verification procedure, rollback support, and test evidence. The automatic-write allowlist is empty in Release 0.1. Adding an operation requires an explicit policy change and tests for planning, conflict detection, verification, redaction, and rollback behavior where supported.
+
+A plan is immutable and contains:
+
+- Plan ID and SHA-256 content hash.
+- Account, repository, and exact target identifiers.
+- Exact operations, current values, desired values, and evidence.
+- Credential type and required effective permissions.
+- Policy hash and tool version.
+- Target preconditions such as ETag, node ID, commit SHA, or settings snapshot hash.
+- Creation and expiration timestamps.
+- Risk and remediation classification.
+
+Approval binds to the plan hash, not a finding ID. An approval records the approver, timestamp, expiration, and optional comment. Application re-reads permissions and target state, verifies every precondition, and fails closed if the plan expired, policy changed, approval is missing, or target state drifted. A new plan and approval are required after any such change.
 
 ## 9. Profile Maintenance
 
@@ -234,6 +270,8 @@ GitHub Account Maintainer audits:
 
 Access changes are report-only unless the user explicitly selects and approves a target. GitHub Account Maintainer never bulk-removes access.
 
+The coverage report must identify access data that GitHub does not expose to the active credential or through a public API. In particular, the product must not claim an account-wide list of personal OAuth grants or personal access tokens when only application-owned grants, organization-scoped token metadata, or settings-page data is available. Such checks use the defined `unsupported` or `inaccessible` coverage state and may emit a finding whose remediation is `manual only`; they are never silently omitted. Browser-based access inventory is a separate, optional capability and remains read-only unless a later scope explicitly approves writes.
+
 ### 12.3 Account continuity
 
 The audit should remind the user to maintain:
@@ -260,6 +298,17 @@ The system audits:
 - Pull requests that have been stale beyond policy thresholds.
 
 Branch deletion, ruleset replacement, or default-branch changes are never unattended.
+
+### Managed maintenance pull requests
+
+- The managed branch defaults to `github-account-maintainer/maintenance` in each target repository.
+- The pull request body and branch contain a versioned machine-readable ownership marker, source plan ID, plan hash, policy hash, and observed base commit SHA.
+- The system updates only a branch and pull request whose marker, repository, and recorded state match its local state. A same-name unmarked branch or pull request is a conflict and is never overwritten.
+- Planning computes changes against the current default-branch commit. Application re-reads the default branch and fails when that base moved unless a new plan is created.
+- Commits append normally. Force pushes, history rewrites, direct default-branch commits, and automatic merges are disabled.
+- Workflow-file changes require the credential permission GitHub specifies for workflow content. Missing permission fails before branch creation.
+- Branch protection, rulesets, required signatures, and organization policy are honored. Inability to satisfy them produces an actionable failure, not a bypass.
+- Generated commits use a configured maintainer identity or GitHub App identity. The product does not claim commits are signed unless GitHub verifies the actual signature.
 
 ## 14. GitHub Actions and CI Health
 
@@ -447,9 +496,13 @@ GitHub Account Maintainer provides recoverable, verified backups of:
 
 - Backup destinations are configurable and outside the source repository.
 - Sensitive metadata and private repositories are encrypted at rest.
+- Backup configuration requires an explicit absolute destination, encryption mode, key reference, retention policy, and minimum free-space preflight. No default destination is inferred.
+- Private repository and sensitive metadata payloads use the maintained `age` file format with an X25519 recipient. Archive payloads use `.tar.zst.age`; public, non-sensitive mirrors may remain unencrypted only when policy explicitly permits it.
+- Encryption is performed by a pinned and preflighted `age` implementation. The project must not implement custom cryptography. The public recipient may be stored in policy; the private identity remains in the operating-system credential store or an explicitly protected file outside the source repository, state database, backup destination, payload, and manifest.
 - Backup manifests contain checksums and timestamps.
 - Scheduled verification confirms that mirrors and archives can be read.
 - Retention and pruning are explicit policy settings.
+- Pruning is disabled until separately planned and explicitly applied. Verification never overwrites a live repository.
 - User migration archives are downloaded promptly because GitHub makes them available only temporarily.
 - User migrations requiring broad classic-token permissions are optional and disabled by default.
 - Restore procedures are tested without overwriting live repositories.
@@ -490,11 +543,11 @@ Cost-affecting changes require approval.
 
 ## 24. Reporting and Dashboard
 
-Each run produces machine-readable and human-readable results:
+Each run produces machine-readable and human-readable results appropriate to the implemented release:
 
 - Account summary.
-- Per-repository health score.
-- Category scores for metadata, documentation, security, access, CI, dependencies, releases, and backup.
+- Per-repository health score when scoring is enabled in Release 0.4 or later.
+- Category scores for metadata, documentation, security, access, CI, dependencies, releases, and backup when scoring is enabled.
 - Findings grouped by severity and remediation type.
 - Exact current and desired values.
 - Evidence and official GitHub links where relevant.
@@ -527,6 +580,12 @@ Every finding contains:
 - First seen, last seen, and resolved timestamps.
 - Exception state and expiration.
 
+Findings have separate stable check IDs and per-observation finding instance IDs. A finding ID is never an approval target.
+
+### Coverage-aware scoring
+
+Scores are not part of Release 0.1. When introduced, scoring uses versioned weights and includes only checks with comparable audited states in the denominator. `Unsupported`, `unavailable_by_plan`, `inaccessible`, `skipped_by_policy`, `not_requested`, and `failed` results remain visible but do not silently reduce a repository's score. Reports show numerator, denominator, excluded-state counts, scoring-policy version, and enough detail to reproduce the score.
+
 ## 25. Notifications and Noise Control
 
 GitHub Account Maintainer notifies only when policy requires action.
@@ -557,10 +616,11 @@ All schedules are configurable, timezone aware, and protected from overlapping r
 
 ### Recommended authentication model
 
-- Use a GitHub App for long-term account-wide repository API access when practical.
-- Separate read-only audit credentials from write-enabled remediation credentials.
+- Use a user-scoped discovery credential to enumerate repositories visible to the configured account. Release 0.1 supports a fine-grained personal access token with documented read permissions and no write permissions.
+- Use GitHub App installation tokens for long-term repository operations when practical. An installation token covers only repositories granted to that installation and is never treated as an account-discovery credential.
+- Use a GitHub App user access token only when an account-level API operation requires user authorization and the app has the corresponding account permission.
+- Separate discovery, read-only audit, write-enabled remediation, browser-session, and optional classic-token capabilities. One credential must not silently substitute for another role.
 - Use short-lived installation tokens where possible.
-- Permit a fine-grained personal access token for MVP development with documented permissions.
 - Require separate explicit authorization for capabilities that need a classic personal access token.
 - Store secrets in the operating system credential store or an approved secrets manager.
 - Store the Playwright browser profile outside the repository and encrypt or protect it using operating-system controls.
@@ -569,7 +629,9 @@ The repository must never contain tokens, cookies, private keys, recovery codes,
 
 ### Permission preflight
 
-Before every operation, GitHub Account Maintainer confirms that the credential has the required effective permission. Missing permissions produce actionable findings rather than partial, misleading results.
+Before every operation, GitHub Account Maintainer confirms the authenticated identity, credential role, target coverage, and required effective permissions. REST clients record relevant `X-Accepted-GitHub-Permissions` response information when available. Missing or ambiguous permissions produce actionable coverage results rather than partial, misleading success. Permission discovery is never used to broaden the credential automatically.
+
+The project maintains a versioned operation-to-endpoint-to-credential permission matrix. A capability cannot leave experimental status until its matrix entry is backed by a contract or integration test.
 
 ## 28. Privacy and AI Use
 
@@ -581,6 +643,22 @@ Before every operation, GitHub Account Maintainer confirms that the credential h
 - Prompts and responses must not contain secrets or credential values.
 - Generated content retains evidence references and confidence scores.
 - AI suggestions cannot directly alter default branches or merge themselves.
+
+### Local data boundaries
+
+`platformdirs` resolves all default per-user paths. On Windows the application root is `%LOCALAPPDATA%\GitHubAccountMaintainer`, with `config`, `state`, `cache`, `reports`, `logs`, `browser`, and `backup-metadata` child directories. The implementation uses the Windows Known Folder result rather than trusting a repository-controlled path. Other platforms use the corresponding `platformdirs` config, state, cache, log, and data locations. These paths never default inside a managed source repository. Backup payload destinations never receive a default.
+
+- Local paths are resolved to absolute paths and checked before writes.
+- Reports, logs, SQLite files, browser data, backup manifests, raw captures, fixtures derived from private data, and temporary clones are excluded from source packages and Git commits.
+- State and report retention are explicit configuration values. Pruning requires its own plan and cannot remove backups.
+- Reports default to the minimum data required. Private repository names, URLs, paths, source excerpts, collaborator identities, and access metadata require an explicitly selected local report detail level.
+- Recorded API fixtures are synthetic or sanitized. They contain no tokens, cookies, signed URLs, private repository names, private source content, or personal access details.
+
+### Threat model
+
+Before any write-enabled release, the repository contains a reviewed threat model covering credential theft, malicious repository content, prompt injection, poisoned fixtures, path traversal, symlink and junction handling, command injection, unsafe Git configuration, browser-session theft, forged approvals, plan replay, API response drift, log leakage, backup disclosure, and compromised dependencies.
+
+Repository content and external text are untrusted. Deterministic parsers receive structured inputs. AI output can create suggestions or proposed diffs only; it cannot call mutating adapters, alter policy, approve a plan, select credentials, or mark verification successful. Private content sent to an external provider requires a repository allowlist plus explicit provider, model, fields, retention policy, and per-run consent.
 
 ## 29. Extensibility
 
@@ -603,13 +681,17 @@ New GitHub features can be added as plugins without changing the core inventory,
 ### Core stack
 
 - Python 3.12 or later.
+- `uv` for dependency management, reproducible environments, and a committed `uv.lock`.
+- `platformdirs` for deterministic per-user config, state, cache, log, report, and browser-data locations.
 - Typer for the CLI.
 - Pydantic for policy, finding, and API models.
 - `httpx` for GitHub REST and GraphQL access.
-- SQLite for local state, findings, approvals, run history, and content hashes.
-- Jinja2 plus a deterministic graphics renderer for reports and social previews.
+- The Python standard-library `sqlite3` module with numbered forward-only migrations for local state, findings, approvals, run history, and content hashes.
+- Jinja2 for text reports and Pillow with bundled, versioned fonts for deterministic social-preview rendering. Templates, fonts, dimensions, layout, colors, and renderer version are explicit inputs to the content hash; system fonts are not used.
 - Playwright for GitHub features without supported write APIs.
 - Structured JSON logging with redaction.
+
+GitHub REST requests pin `X-GitHub-Api-Version: 2026-03-10`. The pinned version is a single application constant and reported in every run. Changing it requires contract-test review and a changelog entry.
 
 ### Major modules
 
@@ -630,45 +712,83 @@ New GitHub features can be added as plugins without changing the core inventory,
 ## 31. Proposed Command Surface
 
 ```text
-github-account-maintainer init
+github-account-maintainer init [--output PATH]
 github-account-maintainer auth check
 github-account-maintainer inventory
 github-account-maintainer audit [--repo OWNER/REPO] [--deep]
 github-account-maintainer plan [--repo OWNER/REPO]
-github-account-maintainer apply-safe [--repo OWNER/REPO]
-github-account-maintainer open-prs [--repo OWNER/REPO]
+github-account-maintainer plans show PLAN_ID
+github-account-maintainer apply-safe PLAN_ID --apply
+github-account-maintainer open-prs PLAN_ID --apply
 github-account-maintainer approvals list
-github-account-maintainer approvals approve FINDING_ID
-github-account-maintainer apply-approved
+github-account-maintainer approvals approve PLAN_ID --expires RFC3339_TIMESTAMP --apply
+github-account-maintainer apply-approved PLAN_ID --apply
 github-account-maintainer pins audit
-github-account-maintainer pins sync
+github-account-maintainer pins sync PLAN_ID --apply
 github-account-maintainer previews audit
-github-account-maintainer previews generate
-github-account-maintainer previews sync
-github-account-maintainer backup run
+github-account-maintainer previews generate PLAN_ID --apply
+github-account-maintainer previews sync PLAN_ID --apply
+github-account-maintainer backup plan
+github-account-maintainer backup run PLAN_ID --apply
 github-account-maintainer backup verify
-github-account-maintainer bootstrap OWNER/REPO
+github-account-maintainer bootstrap plan OWNER/REPO
+github-account-maintainer bootstrap apply PLAN_ID --apply
 github-account-maintainer report --format html
-github-account-maintainer rollback SNAPSHOT_ID
-github-account-maintainer schedule install
+github-account-maintainer rollback plan SNAPSHOT_ID
+github-account-maintainer rollback apply PLAN_ID --apply
+github-account-maintainer schedule install PLAN_ID --apply
 ```
 
-Every mutating command supports `--dry-run`, and dry-run remains the default until `--apply` or an equivalent explicit confirmation is supplied.
+Read-only commands do not accept `--dry-run` because they cannot mutate GitHub. Operational commands capable of changing GitHub, browser state, managed repository files, backups, schedules, approvals, or rollback state require both an unexpired immutable plan ID and the literal `--apply` flag. Interactive confirmation is not an alternative. Omitting either produces no mutation. Initialization and explicit report output may create only the user-selected local path and use atomic no-overwrite behavior unless `--overwrite` is separately supplied. Planning never creates branches, pull requests, browser changes, schedules, backups, or target files.
+
+The CLI defines stable automation exit codes:
+
+- `0`: requested work completed and no finding met the configured failure threshold.
+- `1`: requested audit completed and one or more findings met the configured failure threshold.
+- `2`: run incomplete because of authentication, authorization, API, validation, coverage, or operational failure.
+- `3`: invalid command, configuration, policy, plan, or approval.
+
+A partial audit always exits `2`, even when it also produced findings.
 
 ## 32. Configuration Outline
 
 ```yaml
 account:
   login: mickpletcher
+  github_host: github.com
   include_private: true
   include_owned: true
   include_administered: false
+  affiliations: [owner]
+
+github_api:
+  rest_api_version: "2026-03-10"
+  request_mode: serial
+  mutation_delay_seconds: 1
+
+credentials:
+  discovery: github-account-maintainer/discovery
+  audit: github-account-maintainer/audit
+  remediation: disabled
+  classic_token: disabled
+  browser_profile: disabled
+
+local_data:
+  config_directory: auto
+  state_directory: auto
+  report_directory: auto
+  log_directory: auto
+  report_detail: minimal
+  state_retention_days: 365
+  report_retention_days: 90
 
 safety:
-  dry_run_default: true
-  auto_merge: false
-  allow_destructive_operations: false
+  require_explicit_apply: true
+  automatic_merge: prohibited
+  destructive_operations: prohibited
   require_approval_for_sensitive_settings: true
+  automatic_write_operations: []
+  plan_ttl_hours: 24
 
 repositories:
   modify_archived: false
@@ -708,10 +828,14 @@ security:
   audit_push_protection: true
   audit_code_scanning: true
   audit_private_vulnerability_reporting: true
-  never_dismiss_alerts: true
+  security_alert_dismissal: prohibited
 
 backup:
-  enabled: true
+  enabled: false
+  destination: null
+  encryption_mode: null
+  encryption_key_reference: null
+  retention_policy: null
   encrypt_private_data: true
   include_releases: true
   include_metadata: true
@@ -723,7 +847,7 @@ notifications:
   cooldown_hours: 168
 ```
 
-The final schema must validate incompatible combinations and warn about permissions, plan limitations, or missing destinations before a run begins.
+The final schema rejects unknown fields and incompatible combinations. Hard safety fields accept only the documented `prohibited` value. It fails validation before a run when required credentials, paths, permission declarations, plan support, backup destinations, encryption settings, or retention values are absent. Enabling private backup coverage while encryption is disabled is invalid. Credential fields contain credential-store references only, never secret values.
 
 ## 33. State and Audit History
 
@@ -734,48 +858,58 @@ The state database records:
 - Runs and checkpoints.
 - Findings and status transitions.
 - Exceptions and expirations.
-- Approval decisions and actor.
+- Immutable plans, plan hashes, expiration, preconditions, and application status.
+- Approval decisions, actor, plan hash, creation timestamp, and expiration.
 - Settings snapshots and rollback operations.
 - Open maintenance branches and pull requests.
 - Social-preview input and output hashes.
 - Backup manifests and verification results.
 - Notification cooldowns.
 
-Secrets and raw private repository content are not stored in the state database.
+Secrets, credential-store payloads, browser cookies, raw private repository content, raw AI prompts or responses containing repository content, and backup encryption keys are not stored in the state database. Repository identifiers and evidence stored in minimal mode use stable IDs and redacted display values where full names are unnecessary. Database schema changes use numbered, transactional, forward-only migrations and are covered by migration tests. A pre-migration backup is created outside the source repository before any nonempty database is upgraded.
 
 ## 34. Reliability Requirements
 
 - Paginate every GitHub collection correctly.
+- Send `X-GitHub-Api-Version: 2026-03-10` on every GitHub REST request and expose the pinned version in reports.
 - Respect primary and secondary GitHub rate limits.
 - Use conditional requests and caching where safe.
-- Back off with jitter for transient failures.
+- Begin with serial API requests. Later concurrency requires category-specific measured limits and must never exceed GitHub's published guidance.
+- Wait at least one second between mutating API requests unless GitHub publishes a stricter requirement.
+- Honor `Retry-After` and rate-limit reset headers. Back off with jitter for retryable transient failures and stop after a bounded number of attempts.
 - Resume account-wide runs from durable checkpoints.
-- Limit concurrency per API category.
 - Serialize writes to the same repository or path.
 - Detect concurrent repository changes before applying a plan.
 - Re-read and verify every settings mutation.
 - Verify pull-request branch state before updating it.
 - Redact credentials, cookies, secrets, authorization headers, and signed URLs from logs.
-- Produce a partial-run report that clearly distinguishes failed, skipped, unsupported, and unaudited checks.
+- Resolve and validate every local write target before writing. Reject path traversal and paths that resolve through unexpected symlinks or Windows junctions.
+- Run Git subprocesses with an explicit argument vector, controlled environment, disabled credential prompting, and no shell interpolation of repository-controlled text.
+- Produce a partial-run report that uses the defined coverage states and exits with code `2`.
 
 ## 35. Testing Strategy
 
 ### Unit tests
 
 - Policy inheritance and exceptions.
+- Policy canonicalization, explanation traces, unknown-field rejection, and policy hashes.
 - Repository classification.
 - Pin ranking and tie stability.
-- Findings, severity, and scoring.
+- Findings, severity, coverage states, and finding-instance identity.
 - README evidence extraction.
 - Social-preview rendering and size validation.
 - Redaction.
-- Settings diff and rollback-plan generation.
+- Immutable plan hashes, expiration, approval binding, replay rejection, precondition conflicts, settings diffs, and rollback-plan generation.
+- Path traversal, symlink and junction handling, and command-argument safety.
+- Exit-code behavior, including partial runs.
 
 ### Contract tests
 
-- Recorded GitHub REST and GraphQL response fixtures.
+- Synthetic or sanitized recorded GitHub REST and GraphQL response fixtures.
 - Pagination and rate-limit behavior.
 - Permission and plan-dependent feature responses.
+- API-version headers, redirects, ETags, `Retry-After`, primary limits, and secondary-limit responses.
+- `audited`, `unsupported`, `unavailable_by_plan`, `inherited`, `inaccessible`, `skipped_by_policy`, `not_requested`, and `failed` coverage classification.
 - Content update conflicts.
 - Pull-request deduplication.
 
@@ -786,6 +920,9 @@ Secrets and raw private repository content are not stored in the state database.
 - Maintenance branch and pull-request lifecycle.
 - Backup and restore verification.
 - GitHub App and fine-grained-token authentication.
+- Discovery completeness compared with the declared credential scope.
+- Credential-role separation and rejection of an incorrect credential role.
+- Plan application against deliberately changed target state.
 
 ### Browser-adapter tests
 
@@ -796,70 +933,119 @@ Secrets and raw private repository content are not stored in the state database.
 
 Browser adapters must not be tested against production repositories without an explicit test target.
 
-## 36. Acceptance Criteria
+All write-capable tests use disposable repositories, accounts, browser profiles, schedules, and backup destinations. Test cleanup is explicit and limited to resources created by the test run. Tests never require production credentials.
 
-GitHub Account Maintainer is ready for an initial production run when it can:
+## 36. Release Gates
 
-1. Inventory every repository in the configured account without missing pagination.
-2. Classify repositories and resolve policy deterministically.
-3. Produce a complete read-only account audit and health report.
-4. Show exact current and desired values for supported settings.
-5. Apply a safe metadata or settings correction and verify the result.
-6. Create one consolidated, evidence-backed maintenance pull request for a test repository.
-7. Detect and propose an accurate README update without unsupported claims.
-8. Generate a valid social-preview asset and avoid regeneration when inputs are unchanged.
-9. Compute the desired six profile pins with stable tie handling.
-10. Back up and verify a test repository and its metadata.
-11. Resume a deliberately interrupted multi-repository run.
-12. Demonstrate that destructive and access-related operations cannot run unattended.
-13. Redact secrets from logs and reports.
-14. Pass unit, contract, integration, and browser-adapter test suites.
+Acceptance is phase-specific. Passing a later-looking demonstration does not waive an earlier gate. A release contains only capabilities whose tests and documentation pass its gate.
+
+### Release 0.1: Audit foundation gate
+
+Release 0.1 is ready for a local read-only pilot when it can:
+
+1. Install reproducibly from the committed `pyproject.toml` and `uv.lock` on supported Windows and Linux test environments.
+2. Run `auth check`, verify the discovery identity and read-only role, and never print or persist the token.
+3. Inventory every repository visible within declared discovery scope with proven pagination and a terminal coverage state for every requested item.
+4. Classify repositories and resolve strict policy deterministically with an explanation trace and stable policy hash.
+5. Run deterministic metadata and community-file checks without cloning private content unnecessarily.
+6. Produce schema-versioned JSON and Markdown reports with exact coverage, findings, current and desired values, and minimal-detail privacy defaults.
+7. Use only read-only GitHub requests. The Release 0.1 code path contains no enabled mutating adapter and the automatic-write allowlist is empty.
+8. Return the documented exit codes, including code `2` for every partial run.
+9. Pass unit and contract tests for pagination, API versioning, permission failures, coverage states, policy validation, redaction, paths, and exit codes.
+10. Leave the repository and GitHub account unchanged during repeated audits.
+
+### Release 0.2: Expanded read-only audit gate
+
+Release 0.2 is ready when it additionally:
+
+1. Audits supported repository settings, security features, README evidence, and social-preview validity.
+2. Distinguishes unsupported, unavailable-by-plan, inherited, inaccessible, and failed states through tested API fixtures.
+3. Stores migrated run and finding history without secrets or raw private source content.
+4. Resumes a deliberately interrupted multi-repository audit without duplicating completed work.
+5. Produces a complete-within-declared-coverage audit. Scoring remains disabled unless its separate coverage-aware contract is implemented and tested.
+
+### Release 0.3: Planned remediation and pull-request gate
+
+Release 0.3 is ready when it additionally:
+
+1. Includes the reviewed threat model and versioned operation-permission matrix.
+2. Implements immutable plans, expiring approvals, target preconditions, replay prevention, before-and-after snapshots, verification, and supported rollback planning.
+3. Demonstrates one explicitly allowlisted metadata or nonbreaking settings operation against a disposable repository, including deliberate conflict and verification-failure tests.
+4. Creates or updates one consolidated maintenance branch and pull request in a disposable repository without committing to the default branch or duplicating pull requests.
+5. Proposes an evidence-backed README change without unsupported claims.
+6. Generates a deterministic social-preview asset below the configured size limit and avoids regeneration when inputs are unchanged.
+7. Demonstrates that destructive, access-related, visibility, ownership, archival, default-branch, deletion, and security-alert dismissal operations cannot run unattended.
+
+### Release 0.4: Advanced audit and reporting gate
+
+Release 0.4 is ready when advanced access, ruleset, Actions, dependency, release, SBOM, and attestation checks have documented coverage and contract tests. The HTML dashboard and scoring require reproducible coverage-aware calculations and versioned schemas.
+
+### Release 0.5: Browser-adapter gate
+
+Release 0.5 is ready when profile-pin ranking is stable, browser mutations require immutable approved plans, disposable-account tests pass, selector drift fails without mutation, and session data remains outside the repository. Social-preview assignment follows the same gate.
+
+### Release 0.6: Backup, lifecycle, and bootstrap gate
+
+Release 0.6 is ready when a disposable repository and metadata export can be encrypted, checksummed, verified, and restored to an isolated target; retention does not prune without a separate approved plan; lifecycle remains recommendation-only; and bootstrap never overwrites existing files.
+
+### Release 1.0: Scheduled production gate
+
+Release 1.0 is ready for scheduled production use when Windows Task Scheduler and cron integrations, non-overlap locks, notifications, cooldowns, checkpoint recovery, performance limits, rate-limit handling, upgrade migrations, and end-to-end failure recovery pass. Every capability included in the production schedule must have already passed its own release gate.
 
 ## 37. Delivery Phases
 
-### Phase 1: Audit foundation
+### Phase 1A: Release 0.1 audit foundation
 
-- Authentication and permission preflight.
-- Inventory and repository classification.
-- Policy engine and exceptions.
-- Read-only metadata, settings, security, README, social-preview, and community-health audits.
-- JSON and Markdown reports.
+- `uv` project scaffold, typed models, CLI, linting, testing, and packaging.
+- User-scoped read-only authentication and permission preflight.
+- Inventory, declared coverage, pagination, and repository classification.
+- Strict policy engine, exception validation, explanation traces, and policy hashes.
+- Finding model plus read-only metadata and community-file checks.
+- Schema-versioned JSON and Markdown reports.
+- Serial, version-pinned GitHub clients, redaction, privacy-safe paths, and contract fixtures.
 
-### Phase 2: Safe remediation and pull requests
+### Phase 1B: Release 0.2 expanded audits and state
 
-- Settings planner and safe applier.
-- Before-and-after snapshots.
+- Read-only settings and supported security-feature checks.
+- Deterministic README evidence and social-preview validation.
+- SQLite migrations, run history, finding transitions, and checkpoint resume.
+- Explicit unsupported and manual-review coverage for unavailable account data.
+
+### Phase 2: Release 0.3 planned remediation and pull requests
+
+- Threat model and operation-permission matrix.
+- Immutable planners, approvals, safe appliers, verification, snapshots, and rollback planning.
 - Consolidated maintenance branches and pull requests.
 - README and documentation reconciliation.
-- Social-preview generation.
+- Deterministic social-preview generation with bundled fonts.
 
-### Phase 3: Advanced security, CI, and supply chain
+### Phase 3: Release 0.4 advanced security, CI, and supply chain
 
-- Access governance.
+- Access governance within declared API coverage.
 - Rulesets and Actions audits.
 - Dependency and release health.
 - SBOM and attestation verification.
-- HTML dashboard and scoring.
+- HTML dashboard and coverage-aware scoring.
 
-### Phase 4: Profile and UI adapters
+### Phase 4: Release 0.5 profile and UI adapters
 
-- Profile pin synchronization.
-- Social-preview assignment.
-- Profile-field audit and approved updates.
+- Profile-pin synchronization against disposable test profiles.
+- Social-preview assignment against disposable test repositories.
+- Profile-field audit and separately approved updates.
 
-### Phase 5: Backup, lifecycle, and bootstrap
+### Phase 5: Release 0.6 backup, lifecycle, and bootstrap
 
-- Mirror and metadata backup.
-- Verification and restore testing.
+- Encrypted mirror and metadata backup.
+- Verification and isolated restore testing.
 - Lifecycle recommendations.
-- New-repository detection and baseline bootstrap.
+- New-repository detection and non-overwriting baseline bootstrap.
 
-### Phase 6: Scheduling and production hardening
+### Phase 6: Release 1.0 scheduling and production hardening
 
 - Windows Task Scheduler and cron support.
 - Optional webhook processing.
 - Notifications and cooldowns.
-- Checkpoint/resume, performance, rate-limit, and failure hardening.
+- Non-overlap locking, checkpoint resume, performance, API limits, migrations, and failure hardening.
 - End-to-end production-readiness review.
 
 ## 38. Known Constraints
@@ -867,14 +1053,23 @@ GitHub Account Maintainer is ready for an initial production run when it can:
 - GitHub exposes profile pins through GraphQL but does not document a public write mutation for personal profile pins.
 - GitHub documents social-preview assignment through repository settings rather than a public upload API.
 - Browser automation is therefore isolated, local, optional, and fail-closed.
+- A GitHub App installation token can access only repositories granted to that installation. User-scoped discovery and account permissions require separate credential roles.
 - Feature availability varies by repository visibility, ownership, GitHub plan, and organization policy.
-- Some account credential and security metadata is intentionally unavailable through APIs.
+- Public APIs do not provide a guaranteed account-wide inventory of personal OAuth grants or personal access tokens. Unavailable data remains an explicit coverage limitation and manual-review finding.
+- Settings snapshots do not guarantee rollback. Permissions, GitHub behavior, plan availability, and concurrent changes can make a later rollback impossible.
 - GitHub user migration archives require distinct authorization and remain downloadable for a limited period.
 - Automated README review cannot prove undocumented intent; uncertain changes require human review.
 
 ## 39. Official GitHub References
 
 - Repository API: <https://docs.github.com/en/rest/repos/repos>
+- REST API versions: <https://docs.github.com/en/rest/about-the-rest-api/api-versions>
+- REST API best practices and rate limits: <https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api>
+- GitHub App permissions: <https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/choosing-permissions-for-a-github-app>
+- GitHub App installation scope: <https://docs.github.com/en/apps/using-github-apps/installing-a-github-app-from-a-third-party>
+- GitHub App installation endpoints: <https://docs.github.com/en/rest/apps/installations>
+- OAuth authorization endpoints: <https://docs.github.com/en/rest/apps/oauth-applications>
+- Organization personal-access-token endpoints: <https://docs.github.com/en/rest/orgs/personal-access-tokens>
 - Repository topics: <https://docs.github.com/en/rest/repos/repos#replace-all-repository-topics>
 - Community-profile metrics: <https://docs.github.com/en/rest/metrics/community>
 - Repository rulesets: <https://docs.github.com/en/rest/repos/rules>
