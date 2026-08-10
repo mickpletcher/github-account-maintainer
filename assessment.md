@@ -70,6 +70,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - `main` requires a pull request, passing validation, passing CodeQL security thresholds, linear history, and resolved review threads.
 - Every repository change is required to update this assessment and `changelog.md` in the same commit or pull request.
 - Planned upgrades are tracked by stable IDs in a three-tier future backlog and moved to a permanent completed ledger with verification evidence when implemented.
+- The README provides novice-focused installation, credential, configuration, command, privacy, troubleshooting, and development guidance.
 
 ## Next priorities
 
@@ -83,4 +84,4 @@ Every repository change must update this file and `changelog.md` in the same com
 
 When an upgrade is implemented, move its stable ID from `future-upgrades.md` to `completed-upgrades.md`, record the delivery and verification evidence, and add at least one new upgrade idea to the future backlog in the same pull request.
 
-**Latest assessment change:** Implemented FUT-001 deterministic policy resolution, explanation traces, exception state handling, and stable policy hashing. The GitHub execution path remains read-only.
+**Latest assessment change:** Reworked the README into a detailed novice-first operating guide and confirmed that the capability, safety, limitation, and verification assessment remains accurate.
