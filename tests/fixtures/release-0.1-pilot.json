@@ -1,0 +1,58 @@
+{
+  "account": {
+    "login": "release-pilot",
+    "id": 9001
+  },
+  "inventory_pages": [
+    [
+      {
+        "id": 101,
+        "node_id": "R_101",
+        "full_name": "release-pilot/public-contract",
+        "private": false,
+        "visibility": "public",
+        "archived": false,
+        "fork": false,
+        "html_url": "https://github.com/release-pilot/public-contract",
+        "permissions": {
+          "admin": true,
+          "maintain": true,
+          "push": true,
+          "triage": true,
+          "pull": true
+        }
+      }
+    ],
+    [
+      {
+        "id": 102,
+        "node_id": "R_102",
+        "full_name": "release-pilot/private-contract",
+        "private": true,
+        "visibility": "private",
+        "archived": false,
+        "fork": false,
+        "html_url": "https://github.com/release-pilot/private-contract",
+        "permissions": {
+          "admin": true,
+          "maintain": true,
+          "push": true,
+          "triage": true,
+          "pull": true
+        }
+      }
+    ]
+  ],
+  "repositories": {
+    "release-pilot/public-contract": {
+      "id": 101,
+      "visibility": "public",
+      "missing_required_metadata": false
+    },
+    "release-pilot/private-contract": {
+      "id": 102,
+      "visibility": "private",
+      "missing_required_metadata": true
+    }
+  }
+}

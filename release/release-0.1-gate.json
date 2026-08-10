@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "release": "0.1",
+  "status": "ready_for_local_pilot",
+  "criteria": [
+    {
+      "id": "R01-01",
+      "requirement": "Reproducible locked installation on supported Windows and Linux environments",
+      "automated_evidence": ["uv lock --check", "uv sync --locked --dev", ".github/workflows/ci.yml"]
+    },
+    {
+      "id": "R01-02",
+      "requirement": "Discovery identity and read-only credential verification without token disclosure",
+      "automated_evidence": ["tests/test_auth.py", "tests/test_credentials.py", "tests/test_release_0_1_gate.py"]
+    },
+    {
+      "id": "R01-03",
+      "requirement": "Paginated declared-scope inventory with terminal coverage",
+      "automated_evidence": ["tests/test_inventory.py", "tests/fixtures/release-0.1-pilot.json"]
+    },
+    {
+      "id": "R01-04",
+      "requirement": "Deterministic classification and strict policy resolution with stable hashes",
+      "automated_evidence": ["tests/test_classification.py", "tests/test_policy.py", "tests/test_release_0_1_gate.py"]
+    },
+    {
+      "id": "R01-05",
+      "requirement": "Deterministic metadata and community checks without cloning private content",
+      "automated_evidence": ["tests/test_checks.py", "tests/test_release_0_1_gate.py"]
+    },
+    {
+      "id": "R01-06",
+      "requirement": "Schema-versioned JSON and Markdown with exact coverage and minimal-detail privacy",
+      "automated_evidence": ["tests/test_reporting.py", "tests/test_release_0_1_gate.py"]
+    },
+    {
+      "id": "R01-07",
+      "requirement": "GET-only GitHub path with no enabled mutation adapter or automatic writes",
+      "automated_evidence": ["tests/test_github_api.py", "tests/test_release_0_1_gate.py"]
+    },
+    {
+      "id": "R01-08",
+      "requirement": "Documented exit codes with code 2 for every partial run",
+      "automated_evidence": ["tests/test_cli.py", "tests/test_account_audit.py", "tests/test_release_0_1_gate.py"]
+    },
+    {
+      "id": "R01-09",
+      "requirement": "Unit and contract coverage for API, policy, privacy, paths, coverage, and exits",
+      "automated_evidence": ["tests", "pyproject.toml"]
+    },
+    {
+      "id": "R01-10",
+      "requirement": "Repeated audits leave GitHub and repository state unchanged",
+      "automated_evidence": ["src/github_account_maintainer/pilot.py", "tests/test_release_0_1_gate.py"]
+    }
+  ],
+  "live_pilot": {
+    "minimum_repeats": 2,
+    "maximum_repeats": 5,
+    "report_detail": "minimal",
+    "summary_detail": "count_only",
+    "request_mode": "get_only",
+    "automatic_write_operations": []
+  }
+}
