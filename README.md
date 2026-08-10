@@ -33,6 +33,8 @@ See the [project specification](prompts/github-account-maintainer-project-specif
 
 See [assessment.md](assessment.md) for the current quick overview, implemented capabilities, safety assessment, limitations, verification status, and next priorities.
 
+See [changelog.md](changelog.md) for the complete repository change history.
+
 ## Install
 
 Install `uv`, clone the repository, and run:
@@ -90,7 +92,7 @@ uv run pytest
 
 The CI workflow runs the same checks on pull requests and pushes to `main`.
 
-Every repository change must review and update `assessment.md` in the same commit or pull request. If behavior is unchanged, update its review date and latest assessment change to confirm that the overview remains accurate.
+Every repository change must update `changelog.md` and review and update `assessment.md` in the same commit or pull request, even for the smallest documentation, configuration, dependency, workflow, or maintenance change. If behavior is unchanged, update the assessment review date and latest assessment change to confirm that the overview remains accurate.
 
 ## Planned Release 0.1 work
 

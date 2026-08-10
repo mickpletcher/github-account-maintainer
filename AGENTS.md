@@ -1,5 +1,11 @@
 # Repository Instructions
 
+## Changelog maintenance
+
+- Update `changelog.md` in the same change as every repository modification, including code, documentation, configuration, dependencies, workflows, and maintenance files.
+- Record even the smallest change under `Unreleased` using the appropriate Added, Changed, Fixed, Removed, Security, or Documentation heading.
+- Do not merge a repository change that has not updated `changelog.md`.
+
 ## Assessment maintenance
 
 - Update `assessment.md` in the same change as every repository modification.
