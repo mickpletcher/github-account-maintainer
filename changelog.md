@@ -6,6 +6,10 @@ This file records every repository change, including code, documentation, config
 
 ### Added
 
+- Added FUT-004 Release 0.1 gate manifest mapping all ten specification criteria to automated and live-pilot evidence.
+- Added a paginated synthetic Release 0.1 account fixture and end-to-end tests for separate credentials, public and private repositories, policy hashes, 14 checks per repository, report contracts, redaction, GET-only requests, partial coverage, and repeatability.
+- Added a count-only repeated live-pilot verifier that enforces minimal detail, serial requests, hard safety invariants, complete coverage, report schemas, and matching semantic fingerprints without persisting detailed reports.
+- Added PowerShell and Linux pilot procedures that validate the locked build, lint, formatting, types, tests, and coverage before the live read-only audit.
 - Added FUT-003 account-wide audit orchestration with separate discovery and audit credentials, internal private repository targets, classification, policy binding, and 14 checks per in-scope repository.
 - Added schema-versioned aggregate JSON and detailed Markdown reports containing sanitized bindings, exact results, findings, severity counts, accepted permissions, and terminal coverage.
 - Added configurable audit finding thresholds and deterministic exit codes `0`, `1`, and `2`, with incomplete coverage taking precedence over findings.
@@ -32,6 +36,7 @@ This file records every repository change, including code, documentation, config
 
 ### Changed
 
+- Moved FUT-004 to `completed-upgrades.md`, added FUT-017 versioned release evidence bundles to Tier 2, and updated the README and assessment for pilot readiness.
 - Moved FUT-003 to `completed-upgrades.md`, added FUT-016 audit report compatibility and migration tooling to Tier 2, and synchronized the README and assessment.
 - Refactored inventory collection to retain private API selectors only in a non-serializable internal snapshot while preserving the existing redacted inventory report contract.
 - Allowed account orchestration to pass already validated repository metadata into the check layer, avoiding a duplicate metadata request and preventing classification/check observation drift.

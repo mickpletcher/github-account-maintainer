@@ -19,9 +19,7 @@ Priority can change as the project develops. Moving an unimplemented item betwee
 
 These upgrades directly unblock the read-only Release 0.1 gate.
 
-### FUT-004: Release 0.1 pilot verification
-
-Add contract fixtures and a local read-only pilot procedure that verifies the full Release 0.1 gate without mutating GitHub resources or exposing private repository details.
+No pending upgrades. The private live pilot is a release operation documented in `RELEASE-0.1-PILOT.md`, not a repository implementation backlog item.
 
 ## Tier 2: High value
 
@@ -54,6 +52,10 @@ Add strict lifecycle-threshold settings and explicit flagship, exempt, and maint
 ### FUT-016: Audit report compatibility and migration tooling
 
 Validate stored report schema compatibility across tool versions and provide deterministic local migrations without weakening hashes, privacy redaction, or terminal coverage semantics.
+
+### FUT-017: Versioned release evidence bundles
+
+Generate a sanitized release evidence bundle containing the gate-manifest version, lockfile hash, test summary, coverage summary, workflow links, and count-only pilot attestation without detailed repository or finding data.
 
 ## Tier 3: Strategic
 

@@ -2,11 +2,13 @@
 
 **Last reviewed:** 2026-08-10  
 **Current release:** `0.1.0.dev0`  
-**Overall status:** The read-only account audit is functional from inventory through classification, policy binding, repository checks, aggregation, reporting, and exit evaluation. The Release 0.1 local pilot remains.
+**Overall status:** The read-only account audit and Release 0.1 pilot tooling are functional. The locked automated gate and synthetic repeated-audit contract are implemented. A private live pilot still requires a local minimal-detail configuration and read-only credentials.
 
 ## Quick overview
 
 GitHub Account Maintainer is a local-first Python CLI and library for auditing GitHub account resources against an explicit policy. It verifies separate discovery and audit credentials, inventories repositories, applies declared scope, validates ephemeral metadata evidence, classifies seven repository dimensions with confidence and stable hashes, binds repository class and project type into strict layered policy, and evaluates metadata and common community-file presence. Account reports preserve exact terminal coverage, threshold evaluation, and privacy-safe findings while redacting non-public repository identities by default.
+
+Release 0.1 has a versioned ten-criterion evidence manifest, a paginated public/private synthetic account contract, and a repeated live-pilot verifier. The verifier runs detailed audits only in memory and emits a count-only summary.
 
 The implemented GitHub path is serial and GET-only. It cannot modify repositories, account settings, branches, pull requests, security settings, or other GitHub resources.
 
@@ -49,6 +51,10 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Minimal report mode that replaces private and internal repository names with stable numeric labels and removes their URLs.
 - Structured JSON and Markdown authentication and inventory reports.
 - Stable CLI exit codes: `0` for complete below-threshold results, `1` for complete audits at or above threshold, `2` for incomplete or operational failure, and `3` for invalid configuration or input.
+- Versioned mapping from all ten Release 0.1 specification criteria to locked, test, fixture, and live-pilot evidence.
+- Synthetic end-to-end Release 0.1 contract covering pagination, separate credentials, public and private repositories, deterministic hashes, 14 checks per repository, exact report contracts, redaction, and GET-only requests.
+- Count-only repeated live-pilot verifier that enforces minimal detail, serial requests, hard safety invariants, complete declared coverage, at least one in-scope repository, JSON and Markdown contracts, and matching semantic fingerprints.
+- Windows PowerShell and Linux pilot procedures that run the locked validation gate before the live GitHub audit.
 
 ## Safety and privacy assessment
 
@@ -66,20 +72,21 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Transport and keyring errors are reduced to safe error classes without raw backend details.
 - Private and internal repository names and URLs are redacted unless full report detail is explicitly enabled.
 - API authentication, authorization, rate-limit, server, transport, response, and partial-coverage failures fail closed.
+- The pilot does not persist detailed reports and does not emit account names, repository names or IDs, URLs, credential references, policy selectors, or finding details.
 - Default application data paths resolve outside the source repository.
 
 ## Known limitations
 
 - Flagship and exempt maintenance tiers require explicit override support that is not implemented yet.
 - No state database, scheduling, planning, approval, remediation, rollback, browser automation, backup, or notification workflow is implemented.
-- The tool does not yet satisfy the complete Release 0.1 local pilot gate in the project specification.
+- A private live Release 0.1 pilot cannot run without a user-supplied local configuration, read-only credentials, and at least one in-scope repository. No default local configuration was present during this repository change.
 
 ## Verification and repository health
 
 - Ruff lint passes.
 - Ruff formatting checks pass.
 - Strict Pyright checks pass with no errors.
-- Pytest passes 119 tests with 94.30% total coverage.
+- Pytest passes 130 tests with 94.11% total coverage.
 - The lockfile is reproducible with `uv lock --check`.
 - GitHub Actions uses read-only permissions, pinned action SHAs, non-persistent checkout credentials, stale-run cancellation, and a job timeout.
 - CodeQL scans Python and GitHub Actions sources.
@@ -91,9 +98,9 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 
 ## Next priorities
 
-1. Validate the full Release 0.1 gate with a local read-only pilot.
-2. Add explicit classification overrides and classification-drift diagnostics.
-3. Expand settings and security coverage with permission-aware evidence.
+1. Run the count-only Release 0.1 pilot with a private local configuration before tagging the release.
+2. Expand settings and security coverage with permission-aware evidence.
+3. Add explicit classification overrides and classification-drift diagnostics.
 
 ## Required maintenance
 
@@ -101,4 +108,4 @@ Every repository change must update this file and `changelog.md` in the same com
 
 When an upgrade is implemented, move its stable ID from `future-upgrades.md` to `completed-upgrades.md`, record the delivery and verification evidence, and add at least one new upgrade idea to the future backlog in the same pull request.
 
-**Latest assessment change:** Added FUT-003 account audit orchestration, scope enforcement, aggregated schema reports, finding-threshold evaluation, private selector isolation, and complete/partial exit behavior.
+**Latest assessment change:** Added FUT-004 Release 0.1 gate evidence, paginated synthetic contracts, a count-only repeated live-pilot verifier, and documented Windows and Linux pilot procedures.

@@ -18,6 +18,7 @@ The current version is deliberately read-only. It can verify GitHub identities, 
 - [Verify authentication](#verify-authentication)
 - [Inventory repositories](#inventory-repositories)
 - [Audit repositories](#audit-repositories)
+- [Run the Release 0.1 pilot](#run-the-release-01-pilot)
 - [Command reference](#command-reference)
 - [Repository check foundation](#repository-check-foundation)
 - [Classification and policy binding](#classification-and-policy-binding)
@@ -43,7 +44,7 @@ The package version is `0.1.0.dev0`. Release 0.1 is still under development.
 | Resolve layered policy | Implemented | The account audit resolves and hashes policy separately for each in-scope repository. |
 | Audit metadata and community files | Implemented | The public `audit` command runs 14 deterministic checks per in-scope repository. |
 | Apply GitHub changes | Not implemented | No GitHub mutation endpoint exists. |
-| Full Release 0.1 audit | Pilot pending | The read-only command is implemented. The local pilot gate remains. |
+| Full Release 0.1 audit | Pilot ready | The locked gate, synthetic contracts, count-only verifier, and private live procedure are implemented. |
 
 This status matters. A successful inventory does not mean the account passed a full security or compliance audit.
 
@@ -423,6 +424,34 @@ $auditExitCode = $LASTEXITCODE
 Treat saved audit reports as private local data. Minimal mode redacts private and internal names, but reports still contain public repository names, numeric repository IDs, policy decisions, findings, and operational coverage.
 
 Exit code `0` means complete coverage with no finding at or above the configured threshold. Code `1` means complete coverage with a threshold finding. Code `2` means coverage is partial, even if findings were also produced. Code `3` means the configuration or command input is invalid.
+
+## Run the Release 0.1 pilot
+
+The Release 0.1 pilot verifies the locked build and then runs the live audit twice. It emits only counts and pass/fail state. Detailed audit reports stay in memory and are not written to disk.
+
+Use a private minimal-detail configuration with at least one repository in scope:
+
+```powershell
+.\scripts\Invoke-Release01Pilot.ps1 `
+  -Config "$env:LOCALAPPDATA\GitHubAccountMaintainer\config\config.yaml" `
+  -Repeat 2
+```
+
+The pilot intentionally rejects:
+
+- `report_detail: full`;
+- fewer than two or more than five repeated audits;
+- a non-serial GitHub request mode;
+- automatic write operations;
+- automatic merge or destructive operations;
+- zero in-scope repositories;
+- partial inventory, classification, or check coverage;
+- missing JSON or Markdown report contract sections;
+- different semantic results between the repeated runs.
+
+Findings do not fail the pilot. Findings describe repository compliance. The pilot verifies that the audit itself is complete, deterministic, private by default, and read-only.
+
+See [RELEASE-0.1-PILOT.md](RELEASE-0.1-PILOT.md) for prerequisites, Windows and Linux commands, safe output fields, exit behavior, and the evidence manifest.
 
 ## Command reference
 
@@ -912,13 +941,16 @@ When a tracked upgrade is implemented:
 - [Changelog](changelog.md): Every repository change.
 - [Future upgrades](future-upgrades.md): Three-tier prioritized backlog.
 - [Completed upgrades](completed-upgrades.md): Implemented upgrades with evidence.
+- [Release 0.1 pilot](RELEASE-0.1-PILOT.md): Locked validation and count-only repeated live-audit procedure.
+- [Release 0.1 gate manifest](release/release-0.1-gate.json): Machine-readable mapping of all ten gate criteria to evidence.
 - [Security policy](.github/SECURITY.md): Supported versions and vulnerability-reporting instructions.
 - [License](LICENSE): MIT license terms.
 
 ## Release roadmap
 
-The remaining Release 0.1 work is:
+The Release 0.1 implementation is ready for a private local pilot. Before tagging the release:
 
-1. Validate the complete read-only Release 0.1 gate with contract fixtures and a local pilot.
+1. Run the count-only pilot with a private minimal-detail configuration and valid read-only credentials.
+2. Retain only the count-only result and CI links as release evidence. Do not commit private audit output.
 
 No remediation work begins until the read-only Release 0.1 gate passes.
