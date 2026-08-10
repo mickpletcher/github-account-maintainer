@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "github-account-maintainer"
+version = "0.1.0.dev0"
+description = "Policy-driven, read-first maintenance for accessible GitHub account resources."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Mick Pletcher" }]
+dependencies = [
+  "httpx>=0.28.1,<1",
+  "platformdirs>=4.3.8,<5",
+  "pydantic>=2.11.7,<3",
+  "PyYAML>=6.0.2,<7",
+  "typer>=0.16.0,<1",
+]
+
+[project.scripts]
+github-account-maintainer = "github_account_maintainer.cli:main"
+
+[dependency-groups]
+dev = [
+  "pyright>=1.1.403,<2",
+  "pytest>=8.4.1,<9",
+  "pytest-cov>=6.2.1,<7",
+  "ruff>=0.12.4,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/github_account_maintainer"]
+
+[tool.uv]
+link-mode = "copy"
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers --cov=github_account_maintainer --cov-report=term-missing --cov-fail-under=90"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "S", "SIM", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
