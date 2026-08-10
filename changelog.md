@@ -6,6 +6,11 @@ This file records every repository change, including code, documentation, config
 
 ### Added
 
+- Added FUT-014 deterministic classification for visibility, activity, repository kind, ownership, project type, repository class, and maintenance tier.
+- Added per-dimension confidence, sanitized evidence, audited coverage, canonical classification hashes, and tamper detection.
+- Added strict parsing for synthetic GitHub repository metadata and language-response fixtures while excluding raw topics and language names from serialization.
+- Added privacy-safe repository policy-binding records that feed canonical class and project type into layered policy while preserving repository-specific precedence.
+- Added JSON and Markdown renderers plus tests for classification thresholds, unknown evidence, mixed languages, input mismatch, policy precedence, privacy, and binding integrity.
 - Added FUT-002 repository checks for description, homepage, topic count, primary language, visibility, archive state, and eight common community files.
 - Added explicit compliant, noncompliant, observed, unknown, and inaccessible results with terminal coverage for every repository check.
 - Added privacy-safe repository findings and schema-versioned JSON and Markdown report models that omit repository metadata values, repository file URLs and paths, and file content.
@@ -22,6 +27,7 @@ This file records every repository change, including code, documentation, config
 
 ### Changed
 
+- Moved FUT-014 to `completed-upgrades.md`, added FUT-015 classification overrides and drift diagnostics to Tier 2, and synchronized the README and assessment.
 - Moved FUT-002 to `completed-upgrades.md`, added FUT-014 repository classification and policy binding to Tier 1, and synchronized the README and assessment.
 - Documented the repository check foundation, audit-credential boundary, policy defaults, outcome vocabulary, report contents, privacy behavior, and remaining account-audit work.
 - Updated repository instructions and the README to require changelog maintenance for every change.

@@ -12,6 +12,15 @@ This file is the permanent record of upgrades completed from `future-upgrades.md
 
 ## Completed
 
+### FUT-014: Repository classification and policy binding
+
+- Former tier: Tier 1, Release critical
+- Completed: 2026-08-10
+- Pull request or commit: This pull request
+- Delivered: Added strict parsing for GitHub repository metadata and language evidence; deterministic classification across seven dimensions; per-dimension confidence and sanitized evidence; terminal coverage and canonical classification hashes; inventory-state, canonical-value, hash, target, and timestamp validation; privacy-safe binding records; and automatic repository-class and project-type policy selection with repository-specific precedence.
+- Verification: Synthetic GitHub fixtures and unit tests cover direct, inferred, mixed, empty, archived, unknown, mismatched, malformed, tampered, stale, redacted, and layered-policy behavior. Ruff, formatting, strict Pyright, pytest, lock validation, and ledger-uniqueness checks pass with at least 94% coverage.
+- Replacement idea: Classification overrides and drift diagnostics was added to Tier 2.
+
 ### FUT-002: Metadata and community-file audit checks
 
 - Former tier: Tier 1, Release critical

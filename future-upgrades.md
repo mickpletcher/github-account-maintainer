@@ -19,10 +19,6 @@ Priority can change as the project develops. Moving an unimplemented item betwee
 
 These upgrades directly unblock the read-only Release 0.1 gate.
 
-### FUT-014: Repository classification and policy binding
-
-Classify repositories from deterministic inventory and metadata evidence, record classification confidence, and bind each repository to the correct resolved policy before account-wide audit aggregation.
-
 ### FUT-003: Account audit command and schema reports
 
 Implement the account-level `audit` command with finding evaluation, complete coverage reporting, schema-versioned JSON, Markdown output, and documented exit-code behavior.
@@ -54,6 +50,10 @@ Validate README evidence, repository presentation requirements, and social previ
 ### FUT-013: Policy diagnostics and exception hygiene
 
 Report unused policy layers, redundant overrides, unmatched selectors, and exceptions that are pending, expired, or nearing expiration without changing the resolved policy or suppressing findings.
+
+### FUT-015: Classification overrides and drift diagnostics
+
+Add strict lifecycle-threshold settings and explicit flagship, exempt, and maintenance-tier overrides. Report classification changes between runs without allowing low-confidence evidence to silently select a different policy.
 
 ## Tier 3: Strategic
 

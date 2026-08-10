@@ -1,0 +1,16 @@
+{
+  "id": 101,
+  "visibility": "public",
+  "archived": false,
+  "fork": false,
+  "owner": {
+    "type": "User"
+  },
+  "is_template": false,
+  "mirror_url": null,
+  "size": 42,
+  "language": "PowerShell",
+  "topics": ["automation", "cli"],
+  "has_pages": false,
+  "pushed_at": "2026-08-01T12:00:00Z"
+}

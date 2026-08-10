@@ -2,7 +2,7 @@
 
 GitHub Account Maintainer is a local command-line tool for inspecting the GitHub repositories your account can access. It is being built to compare those repositories with an explicit policy and report what is correct, missing, unsupported, or inaccessible.
 
-The current version is deliberately read-only. It can verify a GitHub identity, inventory repositories, redact private repository identities, and resolve layered policy. It cannot change GitHub.
+The current version is deliberately read-only. It can verify a GitHub identity, inventory and classify repositories, redact private repository identities, bind classifications to layered policy, and run repository check library code. It cannot change GitHub.
 
 ## Contents
 
@@ -19,6 +19,7 @@ The current version is deliberately read-only. It can verify a GitHub identity, 
 - [Inventory repositories](#inventory-repositories)
 - [Command reference](#command-reference)
 - [Repository check foundation](#repository-check-foundation)
+- [Classification and policy binding](#classification-and-policy-binding)
 - [Configuration guide](#configuration-guide)
 - [Policy resolution](#policy-resolution)
 - [Reports and exit codes](#reports-and-exit-codes)
@@ -37,6 +38,7 @@ The package version is `0.1.0.dev0`. Release 0.1 is still under development.
 | Verify authenticated identity | Implemented | Calls the read-only `GET /user` endpoint. |
 | Inventory accessible repositories | Implemented | Calls paginated `GET /user/repos` requests. |
 | Redact private repository identities | Implemented | Enabled by the default `minimal` report detail. |
+| Classify repositories and bind policy | Implemented foundation | Deterministic library code records confidence and binds repository-class, project-type, and repository policy. |
 | Resolve layered policy | Implemented foundation | Deterministic library code exists, but the reserved `audit` command does not use it yet. |
 | Audit metadata and community files | Implemented foundation | Deterministic repository checks and reports exist. The account-level command is not connected yet. |
 | Apply GitHub changes | Not implemented | No GitHub mutation endpoint exists. |
@@ -63,6 +65,9 @@ The implemented code can:
 - Record where every resolved policy value came from.
 - Create a canonical SHA-256 hash for the effective policy.
 - Validate active, expired, pending, and permanent policy exceptions.
+- Classify visibility, activity, repository kind, ownership, project type, repository class, and maintenance tier from validated evidence.
+- Record per-dimension confidence and privacy-safe evidence, plus terminal classification coverage and a stable classification hash.
+- Bind the classified repository class and project type to the existing policy hierarchy before repository checks run.
 - Evaluate repository description, homepage, topic count, primary language, visibility, and archive state.
 - Detect eight common community files through GitHub's community-profile and contents metadata endpoints without cloning or reading file content.
 - Distinguish compliant, noncompliant, observed, unknown, and inaccessible outcomes with a terminal coverage state for every check.
@@ -80,6 +85,7 @@ The current version does not:
 - Clone repository content during inventory.
 - Run metadata and community-file checks from the public CLI. The check layer currently requires library integration.
 - Apply the resolved policy across an account-wide audit.
+- Infer flagship or exempt maintenance tiers without explicit future override rules.
 - Schedule unattended runs.
 - Create backups.
 - Use browser automation.
@@ -103,6 +109,7 @@ The project uses these boundaries:
 - Backend credential errors are reduced to safe error classes.
 - Private and internal repository names and URLs are redacted in `minimal` detail mode.
 - Repository checks report presence and counts. They do not store descriptions, homepage URLs, topic names, language names, file paths, or file content.
+- Classification evidence treats raw topics and language names as ephemeral input. Serialized evidence and binding reports exclude those values and the internal repository API name.
 - Default configuration, state, cache, report, log, browser, and backup-metadata paths are outside the cloned repository.
 
 Treat a personal access token like a password. Never paste it into `config.yaml`, a command history entry, an issue, a pull request, a report, or a committed file.
@@ -451,6 +458,36 @@ The implementation uses only these GET requests:
 
 It does not clone repositories or request file bodies. Inherited community files are reported with `inherited` coverage when GitHub identifies a source outside the audited repository.
 
+## Classification and policy binding
+
+FUT-014 provides the deterministic layer between inventory and the future account-level audit command. It is library code. FUT-003 will orchestrate it across every inventoried repository.
+
+The classifier evaluates seven dimensions:
+
+| Dimension | Possible results |
+| --- | --- |
+| Visibility | `public`, `private`, or `internal` |
+| Activity | `active`, `dormant`, `abandoned_candidate`, `archived`, or `unknown` |
+| Repository kind | `source`, `fork`, `template`, `mirror`, or `empty` |
+| Ownership | `personal_account`, `organization`, or `unknown` |
+| Project type | `python`, `powershell`, `nodejs`, `mcp_server`, `documentation`, `configuration`, `web_application`, `infrastructure`, `mixed`, or `unknown` |
+| Repository class | `application`, `library`, `cli`, `service`, `desktop_application`, `github_pages`, `infrastructure`, `documentation`, `configuration`, `empty`, or `unknown` |
+| Maintenance tier | `active`, `standard`, `experimental`, or `legacy` from current evidence. `flagship` and `exempt` are reserved for explicit future override rules. |
+
+Direct GitHub facts such as visibility, archive state, fork state, owner type, template state, mirror state, repository size, Pages state, and push time receive the strongest confidence. Project type and repository class use a fixed allowlist of known topic and language families. Unknown inputs never become new policy selectors. Multiple recognized language families that each represent at least 20 percent are classified as `mixed`.
+
+Activity uses fixed Release 0.1 thresholds:
+
+- `active`: pushed within 180 days.
+- `dormant`: last push was 181 through 730 days ago.
+- `abandoned_candidate`: last push was more than 730 days ago.
+- `archived`: GitHub reports the repository as archived.
+- `unknown`: no push timestamp was available.
+
+The raw GitHub repository and language responses are validated before classification. Repository ID, visibility, archive state, and fork state must match inventory. A mismatch fails closed. The classification hash must match its canonical decisions, and policy binding requires the classification timestamp to equal the policy evaluation timestamp.
+
+Binding feeds the canonical repository class and project type into policy resolution in the existing order. Repository-specific policy still has higher precedence. The privacy-safe binding record contains the redacted display name, classification decisions and confidence, classification hash, policy hash, and applied policy-source types. It does not contain the internal `owner/repository` selector, raw topics, raw language names, or policy source keys.
+
 ## Configuration guide
 
 The configuration is strict YAML. Indentation matters. Unknown fields, invalid values, and unsafe combinations are rejected with exit code `3`.
@@ -619,6 +656,8 @@ Resolution produces:
 
 Equivalent policy inputs produce the same resolved result and hash. The current CLI validates this configuration, but the reserved `audit` command does not invoke the resolver yet.
 
+The classification layer now supplies `repository_class` and `project_type` automatically when library callers bind a repository. FUT-003 will connect that binding to account-wide CLI execution.
+
 The built-in metadata policy requires a description, at least one topic, and a primary language. Homepage is optional. The built-in community policy requires README, LICENSE, and SECURITY files. CONTRIBUTING, CODE_OF_CONDUCT, SUPPORT, issue templates, and pull request templates are optional unless a matching policy layer makes them required.
 
 ## Reports and exit codes
@@ -631,6 +670,8 @@ The built-in metadata policy requires a description, at least one topic, and a p
 - `markdown`: Human-readable output.
 
 The repository check library also has schema-versioned JSON and Markdown renderers. Its report includes the policy hash, sanitized repository display name, credential source, accepted GitHub permissions, all results, terminal coverage, and findings. FUT-003 will expose those reports through the account-level CLI.
+
+Classification and policy binding also have schema-versioned JSON and Markdown renderers. They include confidence and hashes without exposing raw private classification inputs.
 
 ### Exit codes
 
@@ -801,8 +842,7 @@ When a tracked upgrade is implemented:
 
 The remaining Release 0.1 work is:
 
-1. Connect repository classification and resolved policy to the account audit workflow.
-2. Implement the schema-versioned account-level `audit` command and documented exit behavior.
-3. Validate the complete read-only Release 0.1 gate with contract fixtures and a local pilot.
+1. Implement the schema-versioned account-level `audit` command, orchestration, aggregation, and documented exit behavior.
+2. Validate the complete read-only Release 0.1 gate with contract fixtures and a local pilot.
 
 No remediation work begins until the read-only Release 0.1 gate passes.
