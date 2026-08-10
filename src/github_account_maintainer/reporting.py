@@ -13,6 +13,7 @@ def render_markdown(report: RunReport) -> str:
         "",
         f"- Account: `{report.account_display}`",
         f"- Status: `{report.status.value}`",
+        f"- Policy hash: `{report.policy_hash}`",
         f"- GitHub API version: `{report.github_api_version}`",
         f"- Started: `{report.started_at.isoformat()}`",
         f"- Completed: `{report.completed_at.isoformat()}`",

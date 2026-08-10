@@ -19,10 +19,6 @@ Priority can change as the project develops. Moving an unimplemented item betwee
 
 These upgrades directly unblock the read-only Release 0.1 gate.
 
-### FUT-001: Deterministic policy engine
-
-Resolve policy inheritance deterministically and emit an explanation trace plus a stable policy hash. Add fixtures proving that equivalent inputs produce identical results.
-
 ### FUT-002: Metadata and community-file audit checks
 
 Add read-only checks for repository metadata and required community files. Every check must report explicit coverage and distinguish compliant, noncompliant, unknown, and inaccessible results.
@@ -54,6 +50,10 @@ Add resumable multi-repository audits with deterministic checkpoints, bounded re
 ### FUT-008: README evidence and social preview validation
 
 Validate README evidence, repository presentation requirements, and social preview configuration while preserving the project's private-data redaction rules.
+
+### FUT-013: Policy diagnostics and exception hygiene
+
+Report unused policy layers, redundant overrides, unmatched selectors, and exceptions that are pending, expired, or nearing expiration without changing the resolved policy or suppressing findings.
 
 ## Tier 3: Strategic
 

@@ -28,6 +28,7 @@ def report() -> RunReport:
         started_at=timestamp,
         completed_at=timestamp,
         status=RunStatus.COMPLETE,
+        policy_hash="0" * 64,
         coverage=[CoverageRecord(check_id="inventory.repositories", state=CoverageState.AUDITED)],
     )
 
@@ -37,6 +38,7 @@ def test_render_json_is_schema_versioned() -> None:
 
     assert '"schema_version": "1.0"' in output
     assert '"github_api_version": "2026-03-10"' in output
+    assert '"policy_hash": "0000000000000000000000000000000000000000000000000000000000000000"' in output
 
 
 def test_render_markdown_contains_coverage() -> None:
@@ -44,6 +46,7 @@ def test_render_markdown_contains_coverage() -> None:
 
     assert "# GitHub Account Maintainer Report" in output
     assert "`inventory.repositories`: `audited`" in output
+    assert "Policy hash: `0000000000000000000000000000000000000000000000000000000000000000`" in output
     assert output.endswith("\n")
 
 

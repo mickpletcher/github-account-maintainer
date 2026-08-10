@@ -1,5 +1,6 @@
 import os
 import re
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Literal
 from uuid import uuid4
@@ -168,6 +169,137 @@ class NotificationConfig(StrictModel):
     cooldown_hours: NonNegativeInt = 168
 
 
+class RepositoryPolicyPatch(StrictModel):
+    modify_archived: bool | None = None
+    modify_forks: bool | None = None
+    include_patterns: tuple[str, ...] | None = None
+    exclude_patterns: tuple[str, ...] | None = None
+
+
+class PinPolicyPatch(StrictModel):
+    mode: Literal["top_stars"] | None = None
+    count: Annotated[int, Field(ge=1, le=6)] | None = None
+    include_contributed: bool | None = None
+    exclude_archived: bool | None = None
+    exclude_forks: bool | None = None
+    preserve_ties: bool | None = None
+    protected: tuple[str, ...] | None = None
+    excluded: tuple[str, ...] | None = None
+
+
+class ReadmePolicyPatch(StrictModel):
+    enabled: bool | None = None
+    remediation: Literal["pull_request"] | None = None
+    preserve_manual_sections: bool | None = None
+    validate_links: bool | None = None
+    private_ai_provider: Literal["disabled"] | None = None
+
+
+class SocialPreviewPolicyPatch(StrictModel):
+    enabled: bool | None = None
+    default_path: Path | None = None
+    width: PositiveInt | None = None
+    height: PositiveInt | None = None
+    max_bytes: PositiveInt | None = None
+    remediation: Literal["pull_request_then_browser_upload"] | None = None
+    protected_repositories: tuple[str, ...] | None = None
+
+
+class SecurityPolicyPatch(StrictModel):
+    audit_dependabot: bool | None = None
+    audit_secret_scanning: bool | None = None
+    audit_push_protection: bool | None = None
+    audit_code_scanning: bool | None = None
+    audit_private_vulnerability_reporting: bool | None = None
+    security_alert_dismissal: Literal["prohibited"] | None = None
+
+
+class NotificationPolicyPatch(StrictModel):
+    clean_run_summary: bool | None = None
+    maintenance_pr_label: str | None = None
+    cooldown_hours: NonNegativeInt | None = None
+
+
+class PolicySettingsPatch(StrictModel):
+    repositories: RepositoryPolicyPatch | None = None
+    pins: PinPolicyPatch | None = None
+    readme: ReadmePolicyPatch | None = None
+    social_preview: SocialPreviewPolicyPatch | None = None
+    security: SecurityPolicyPatch | None = None
+    notifications: NotificationPolicyPatch | None = None
+
+
+class PolicyExceptionConfig(StrictModel):
+    exception_id: Annotated[str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$")]
+    target_selector: str
+    check_ids: tuple[str, ...]
+    reason: str
+    creator: str
+    created_at: datetime
+    expires_at: datetime | None = None
+    permanent: bool = False
+
+    @field_validator("target_selector", "reason", "creator")
+    @classmethod
+    def validate_nonempty_text(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("value must not be empty")
+        return normalized
+
+    @field_validator("check_ids")
+    @classmethod
+    def validate_check_ids(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if not value:
+            raise ValueError("check_ids must not be empty")
+        if any(not re.fullmatch(r"[a-z0-9]+(?:[._-][a-z0-9]+)*", check_id) for check_id in value):
+            raise ValueError("check_ids must contain stable lowercase identifiers")
+        return tuple(sorted(set(value)))
+
+    @field_validator("created_at", "expires_at")
+    @classmethod
+    def validate_utc_timestamp(cls, value: datetime | None) -> datetime | None:
+        if value is not None and value.utcoffset() != timedelta(0):
+            raise ValueError("timestamps must use RFC 3339 UTC")
+        return value
+
+    @model_validator(mode="after")
+    def validate_expiration(self) -> "PolicyExceptionConfig":
+        if self.permanent and self.expires_at is not None:
+            raise ValueError("permanent exceptions must not have an expiration")
+        if not self.permanent and self.expires_at is None:
+            raise ValueError("non-permanent exceptions require an expiration")
+        if self.expires_at is not None and self.expires_at <= self.created_at:
+            raise ValueError("exception expiration must be after creation")
+        return self
+
+
+class PolicyHierarchyConfig(StrictModel):
+    repository_classes: dict[str, PolicySettingsPatch] = {}
+    project_types: dict[str, PolicySettingsPatch] = {}
+    repositories: dict[str, PolicySettingsPatch] = {}
+    exceptions: tuple[PolicyExceptionConfig, ...] = ()
+
+    @field_validator("repository_classes", "project_types", "repositories")
+    @classmethod
+    def validate_layer_keys(cls, value: dict[str, PolicySettingsPatch]) -> dict[str, PolicySettingsPatch]:
+        normalized_keys = [key.strip() for key in value]
+        if any(not key for key in normalized_keys):
+            raise ValueError("policy layer keys must not be empty")
+        if normalized_keys != list(value):
+            raise ValueError("policy layer keys must not have surrounding whitespace")
+        if len({key.casefold() for key in normalized_keys}) != len(normalized_keys):
+            raise ValueError("policy layer keys must be unique ignoring case")
+        return value
+
+    @model_validator(mode="after")
+    def validate_exception_ids(self) -> "PolicyHierarchyConfig":
+        exception_ids = [exception.exception_id.casefold() for exception in self.exceptions]
+        if len(set(exception_ids)) != len(exception_ids):
+            raise ValueError("exception IDs must be unique ignoring case")
+        return self
+
+
 class AppConfig(StrictModel):
     account: AccountConfig
     github_api: GitHubApiConfig = GitHubApiConfig()
@@ -181,6 +313,7 @@ class AppConfig(StrictModel):
     security: SecurityConfig = SecurityConfig()
     backup: BackupConfig = BackupConfig()
     notifications: NotificationConfig = NotificationConfig()
+    policy: PolicyHierarchyConfig = PolicyHierarchyConfig()
 
 
 def default_root() -> Path:

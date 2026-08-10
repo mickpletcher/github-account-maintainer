@@ -9,12 +9,18 @@ This file records every repository change, including code, documentation, config
 - Added this changelog and backfilled the complete repository history through PR #6.
 - Added `future-upgrades.md` with three priority tiers, stable upgrade IDs, and an initial backlog aligned with the project specification.
 - Added `completed-upgrades.md` as the permanent record for implemented and verified backlog items.
+- Added a strict policy hierarchy covering account, repository-class, project-type, repository-specific, and exception layers.
+- Added deterministic policy resolution with complete provenance traces and canonical SHA-256 hashes.
+- Added active, expired, pending, permanent, and unmatched exception handling with strict identifiers and RFC 3339 UTC timestamp validation.
+- Added equivalent YAML policy fixtures and policy tests covering precedence, canonicalization, hashing, exceptions, and unknown-field rejection.
+- Added policy hashes and traces to account run reports.
 
 ### Changed
 
 - Updated repository instructions and the README to require changelog maintenance for every change.
 - Reviewed and updated `assessment.md` to record the new changelog requirement without changing the tool's runtime behavior.
 - Updated repository instructions, the README, and the assessment to require implemented upgrades to move between ledgers with evidence and a replacement future idea.
+- Moved FUT-001 to `completed-upgrades.md`, added FUT-013 policy diagnostics and exception hygiene to Tier 2, and synchronized the README and assessment.
 
 ## 2026-08-10
 
