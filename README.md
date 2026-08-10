@@ -31,6 +31,8 @@ Release 0.1 is under development. This scaffold provides:
 
 See the [project specification](prompts/github-account-maintainer-project-specification.md) for the complete scope and release gates.
 
+See [assessment.md](assessment.md) for the current quick overview, implemented capabilities, safety assessment, limitations, verification status, and next priorities.
+
 ## Install
 
 Install `uv`, clone the repository, and run:
@@ -87,6 +89,8 @@ uv run pytest
 ```
 
 The CI workflow runs the same checks on pull requests and pushes to `main`.
+
+Every repository change must review and update `assessment.md` in the same commit or pull request. If behavior is unchanged, update its review date and latest assessment change to confirm that the overview remains accurate.
 
 ## Planned Release 0.1 work
 
