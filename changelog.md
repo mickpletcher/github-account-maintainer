@@ -7,11 +7,14 @@ This file records every repository change, including code, documentation, config
 ### Added
 
 - Added this changelog and backfilled the complete repository history through PR #6.
+- Added `future-upgrades.md` with three priority tiers, stable upgrade IDs, and an initial backlog aligned with the project specification.
+- Added `completed-upgrades.md` as the permanent record for implemented and verified backlog items.
 
 ### Changed
 
 - Updated repository instructions and the README to require changelog maintenance for every change.
 - Reviewed and updated `assessment.md` to record the new changelog requirement without changing the tool's runtime behavior.
+- Updated repository instructions, the README, and the assessment to require implemented upgrades to move between ledgers with evidence and a replacement future idea.
 
 ## 2026-08-10
 

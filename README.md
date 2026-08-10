@@ -35,6 +35,8 @@ See [assessment.md](assessment.md) for the current quick overview, implemented c
 
 See [changelog.md](changelog.md) for the complete repository change history.
 
+See [future-upgrades.md](future-upgrades.md) for the three-tier prioritized backlog and [completed-upgrades.md](completed-upgrades.md) for verified upgrades that have shipped.
+
 ## Install
 
 Install `uv`, clone the repository, and run:
@@ -93,6 +95,8 @@ uv run pytest
 The CI workflow runs the same checks on pull requests and pushes to `main`.
 
 Every repository change must update `changelog.md` and review and update `assessment.md` in the same commit or pull request, even for the smallest documentation, configuration, dependency, workflow, or maintenance change. If behavior is unchanged, update the assessment review date and latest assessment change to confirm that the overview remains accurate.
+
+When a tracked upgrade is implemented, move it from `future-upgrades.md` to `completed-upgrades.md`, preserve its stable ID and evidence, and add at least one new upgrade idea to any future priority tier in the same pull request.
 
 ## Planned Release 0.1 work
 
