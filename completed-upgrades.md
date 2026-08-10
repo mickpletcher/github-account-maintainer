@@ -16,7 +16,7 @@ This file is the permanent record of upgrades completed from `future-upgrades.md
 
 - Former tier: Tier 1, Release critical
 - Completed: 2026-08-10
-- Pull request or commit: This pull request
+- Pull request or commit: [PR #14](https://github.com/mickpletcher/github-account-maintainer/pull/14)
 - Delivered: Added a versioned manifest mapping all ten Release 0.1 gate criteria to evidence; a paginated synthetic account fixture with public and private repositories; end-to-end contract tests for separate credentials, deterministic policy bindings, 14 checks per repository, exact JSON and Markdown contracts, private-name redaction, GET-only requests, complete and partial behavior, and repeated semantic results; a count-only live verifier that enforces minimal detail and hard safety settings; and documented PowerShell and Linux pilot procedures that run locked validation before two through five live audits.
 - Verification: The synthetic repeated pilot passes without exposing the private fixture name in reports or summaries. Partial coverage, unsafe detail, unsafe write configuration, invalid repeat counts, semantic drift, missing configuration, and operational error disclosure fail closed. Ruff, formatting, strict Pyright, 130 pytest tests with 94.11% coverage, lock validation, PowerShell syntax, manifest completeness, and ledger uniqueness pass. A private live pilot was not run because no local configuration exists at the default application path.
 - Replacement idea: FUT-017 versioned release evidence bundles was added to Tier 2.
