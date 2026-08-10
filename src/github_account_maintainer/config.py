@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 from typing import Annotated, Literal
 from uuid import uuid4
@@ -11,6 +12,18 @@ from github_account_maintainer.constants import APP_NAME, GITHUB_API_VERSION
 
 PositiveInt = Annotated[int, Field(gt=0)]
 NonNegativeInt = Annotated[int, Field(ge=0)]
+
+
+def _valid_credential_reference(value: str) -> bool:
+    scheme, separator, target = value.partition(":")
+    if not separator or not target:
+        return False
+    if scheme == "env":
+        return True
+    if scheme == "keyring":
+        service, account_separator, account = target.rpartition("/")
+        return bool(account_separator and service and account)
+    return False
 
 
 class StrictModel(BaseModel):
@@ -28,7 +41,7 @@ class AccountConfig(StrictModel):
     @field_validator("github_host")
     @classmethod
     def validate_github_host(cls, value: str) -> str:
-        if not value or any(character in value for character in ("://", "/", "\\", "@", " ")):
+        if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?", value):
             raise ValueError("github_host must be a hostname without a scheme or path")
         return value
 
@@ -55,12 +68,19 @@ class CredentialConfig(StrictModel):
     classic_token: Literal["disabled"] = "disabled"  # noqa: S105
     browser_profile: str = "disabled"
 
-    @field_validator("discovery", "audit", "remediation", "browser_profile")
+    @field_validator("discovery", "audit")
     @classmethod
-    def validate_reference(cls, value: str) -> str:
-        if value == "disabled" or value.startswith(("env:", "keyring:")):
+    def validate_required_reference(cls, value: str) -> str:
+        if _valid_credential_reference(value):
             return value
-        raise ValueError("Credential values must be disabled or use an env: or keyring: reference")
+        raise ValueError("Credential value must use env:NAME or keyring:SERVICE/ACCOUNT")
+
+    @field_validator("remediation", "browser_profile")
+    @classmethod
+    def validate_optional_reference(cls, value: str) -> str:
+        if value == "disabled" or _valid_credential_reference(value):
+            return value
+        raise ValueError("Credential value must be disabled or use env:NAME or keyring:SERVICE/ACCOUNT")
 
 
 class LocalDataConfig(StrictModel):

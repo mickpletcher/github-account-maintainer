@@ -151,6 +151,18 @@ def test_invalid_config_does_not_echo_literal_credential(tmp_path: Path) -> None
     assert "literal-secret-token" not in result.stderr
 
 
+@pytest.mark.parametrize("reference", ["disabled", "env:", "keyring:missing-account"])
+def test_invalid_discovery_credential_config_exits_three(tmp_path: Path, reference: str) -> None:
+    config_path = create_config(tmp_path)
+    content = config_path.read_text(encoding="utf-8").replace("keyring:github-account-maintainer/discovery", reference)
+    config_path.write_text(content, encoding="utf-8")
+
+    result = runner.invoke(app, ["inventory", "--config", str(config_path)])
+
+    assert result.exit_code == 3
+    assert "Invalid configuration" in result.stderr
+
+
 def create_config(tmp_path: Path) -> Path:
     path = tmp_path / "config.yaml"
     config = cli_module.default_config("mickpletcher")

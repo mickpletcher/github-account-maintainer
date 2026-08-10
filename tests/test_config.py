@@ -40,6 +40,18 @@ def test_literal_credential_value_is_rejected() -> None:
         AppConfig.model_validate(raw)
 
 
+@pytest.mark.parametrize(
+    "reference",
+    ["disabled", "env:", "keyring:", "keyring:missing-account", "file:token.txt"],
+)
+def test_invalid_required_credential_reference_is_rejected(reference: str) -> None:
+    raw = default_config("mickpletcher").model_dump(mode="json")
+    raw["credentials"]["discovery"] = reference
+
+    with pytest.raises(ValidationError):
+        AppConfig.model_validate(raw)
+
+
 def test_affiliation_flags_must_match_declared_affiliations() -> None:
     raw = default_config("mickpletcher").model_dump(mode="json")
     raw["account"]["include_administered"] = True
@@ -48,9 +60,20 @@ def test_affiliation_flags_must_match_declared_affiliations() -> None:
         AppConfig.model_validate(raw)
 
 
-def test_github_host_rejects_scheme_or_path() -> None:
+@pytest.mark.parametrize(
+    "host",
+    [
+        "https://github.example.com/path",
+        "github.example.com/path",
+        "github.example.com?token=value",
+        "github.example.com#fragment",
+        "github.example.com:443",
+        "github.example.com\nother.example.com",
+    ],
+)
+def test_github_host_rejects_non_hostname_values(host: str) -> None:
     raw = default_config("mickpletcher").model_dump(mode="json")
-    raw["account"]["github_host"] = "https://github.example.com/path"
+    raw["account"]["github_host"] = host
 
     with pytest.raises(ValidationError):
         AppConfig.model_validate(raw)
