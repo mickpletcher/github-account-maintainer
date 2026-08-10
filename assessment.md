@@ -63,6 +63,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Dependabot monitors uv and GitHub Actions dependencies.
 - `main` requires a pull request, passing validation, passing CodeQL security thresholds, linear history, and resolved review threads.
 - Every repository change is required to update this assessment and `changelog.md` in the same commit or pull request.
+- Planned upgrades are tracked by stable IDs in a three-tier future backlog and moved to a permanent completed ledger with verification evidence when implemented.
 
 ## Next priorities
 
@@ -75,4 +76,6 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 
 Every repository change must update this file and `changelog.md` in the same commit or pull request. Review the quick overview, command status, capabilities, limitations, verification results, and next priorities. If a change does not affect tool behavior, update the review date and record that the assessment remains accurate.
 
-**Latest assessment change:** Added mandatory changelog maintenance and confirmed that the tool capability assessment remains accurate.
+When an upgrade is implemented, move its stable ID from `future-upgrades.md` to `completed-upgrades.md`, record the delivery and verification evidence, and add at least one new upgrade idea to the future backlog in the same pull request.
+
+**Latest assessment change:** Added the three-tier future upgrade backlog, completed upgrade ledger, and synchronization rules. The tool capability assessment remains accurate and runtime behavior is unchanged.
