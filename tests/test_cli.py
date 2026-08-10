@@ -6,11 +6,21 @@ import yaml
 from typer.testing import CliRunner
 
 import github_account_maintainer.cli as cli_module
+from github_account_maintainer.account_audit import AccountAuditReport, FindingSummary
 from github_account_maintainer.cli import app
 from github_account_maintainer.config import AppConfig
 from github_account_maintainer.constants import GITHUB_API_VERSION
 from github_account_maintainer.credentials import CredentialResolutionError
-from github_account_maintainer.models import AuthReport, CoverageRecord, CoverageState, InventoryReport, RunStatus
+from github_account_maintainer.models import (
+    AuthReport,
+    CoverageRecord,
+    CoverageState,
+    Finding,
+    InventoryReport,
+    RemediationClass,
+    RunStatus,
+    Severity,
+)
 
 runner = CliRunner()
 
@@ -58,11 +68,36 @@ def test_init_overwrites_only_when_explicit(tmp_path: Path) -> None:
     assert "preserve" not in yaml.safe_load(output.read_text(encoding="utf-8"))
 
 
-def test_reserved_audit_command_fails_as_incomplete() -> None:
-    result = runner.invoke(app, ["audit"])
+def test_audit_command_outputs_report_and_honors_findings_exit_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config_path = create_config(tmp_path)
+    report = account_audit_report(RunStatus.COMPLETE, threshold_met=True)
+
+    def return_report(_config: AppConfig) -> AccountAuditReport:
+        return report
+
+    monkeypatch.setattr(cli_module, "run_account_audit", return_report)
+
+    result = runner.invoke(app, ["audit", "--config", str(config_path), "--format", "markdown"])
+
+    assert result.exit_code == 1
+    assert "# GitHub Account Audit" in result.stdout
+
+
+def test_audit_partial_report_exits_two(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    config_path = create_config(tmp_path)
+    report = account_audit_report(RunStatus.PARTIAL, threshold_met=False)
+
+    def return_report(_config: AppConfig) -> AccountAuditReport:
+        return report
+
+    monkeypatch.setattr(cli_module, "run_account_audit", return_report)
+
+    result = runner.invoke(app, ["audit", "--config", str(config_path)])
 
     assert result.exit_code == 2
-    assert "implementation" in result.stderr
+    assert '"status": "partial"' in result.stdout
 
 
 def test_auth_check_outputs_json(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -168,3 +203,41 @@ def create_config(tmp_path: Path) -> Path:
     config = cli_module.default_config("mickpletcher")
     cli_module.write_config(config, path)
     return path
+
+
+def account_audit_report(status: RunStatus, *, threshold_met: bool) -> AccountAuditReport:
+    timestamp = datetime(2026, 8, 10, 12, tzinfo=UTC)
+    return AccountAuditReport(
+        tool_version="0.1.0.dev0",
+        github_api_version=GITHUB_API_VERSION,
+        account_display="mickpletcher",
+        discovery_credential_source="env:DISCOVERY_TOKEN",
+        audit_credential_source="env:AUDIT_TOKEN",
+        started_at=timestamp,
+        completed_at=timestamp,
+        status=status,
+        inventory_status=RunStatus.COMPLETE,
+        repository_count=0,
+        requested_repository_count=0,
+        audited_repository_count=0,
+        finding_summary=FindingSummary(
+            threshold=Severity.LOW,
+            threshold_met=threshold_met,
+            total=1 if threshold_met else 0,
+            low=1 if threshold_met else 0,
+        ),
+        findings=(_finding(timestamp),) if threshold_met else (),
+    )
+
+
+def _finding(timestamp: datetime) -> Finding:
+    return Finding(
+        finding_id="test-finding",
+        check_id="metadata.description",
+        category="metadata",
+        severity=Severity.LOW,
+        current_state={"present": False},
+        desired_state={"requirement": "required"},
+        remediation_class=RemediationClass.APPROVAL_REQUIRED,
+        observed_at=timestamp,
+    )

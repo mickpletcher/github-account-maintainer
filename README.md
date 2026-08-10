@@ -2,7 +2,7 @@
 
 GitHub Account Maintainer is a local command-line tool for inspecting the GitHub repositories your account can access. It is being built to compare those repositories with an explicit policy and report what is correct, missing, unsupported, or inaccessible.
 
-The current version is deliberately read-only. It can verify a GitHub identity, inventory and classify repositories, redact private repository identities, bind classifications to layered policy, and run repository check library code. It cannot change GitHub.
+The current version is deliberately read-only. It can verify GitHub identities, inventory and classify repositories, redact private repository identities, bind classifications to layered policy, run repository checks, and aggregate an account audit. It cannot change GitHub.
 
 ## Contents
 
@@ -17,6 +17,7 @@ The current version is deliberately read-only. It can verify a GitHub identity, 
 - [Create the configuration](#create-the-configuration)
 - [Verify authentication](#verify-authentication)
 - [Inventory repositories](#inventory-repositories)
+- [Audit repositories](#audit-repositories)
 - [Command reference](#command-reference)
 - [Repository check foundation](#repository-check-foundation)
 - [Classification and policy binding](#classification-and-policy-binding)
@@ -38,11 +39,11 @@ The package version is `0.1.0.dev0`. Release 0.1 is still under development.
 | Verify authenticated identity | Implemented | Calls the read-only `GET /user` endpoint. |
 | Inventory accessible repositories | Implemented | Calls paginated `GET /user/repos` requests. |
 | Redact private repository identities | Implemented | Enabled by the default `minimal` report detail. |
-| Classify repositories and bind policy | Implemented foundation | Deterministic library code records confidence and binds repository-class, project-type, and repository policy. |
-| Resolve layered policy | Implemented foundation | Deterministic library code exists, but the reserved `audit` command does not use it yet. |
-| Audit metadata and community files | Implemented foundation | Deterministic repository checks and reports exist. The account-level command is not connected yet. |
+| Classify repositories and bind policy | Implemented | The account audit records confidence and binds repository-class, project-type, and repository policy. |
+| Resolve layered policy | Implemented | The account audit resolves and hashes policy separately for each in-scope repository. |
+| Audit metadata and community files | Implemented | The public `audit` command runs 14 deterministic checks per in-scope repository. |
 | Apply GitHub changes | Not implemented | No GitHub mutation endpoint exists. |
-| Full Release 0.1 audit | Not implemented | The `audit` command exits with code `2`. |
+| Full Release 0.1 audit | Pilot pending | The read-only command is implemented. The local pilot gate remains. |
 
 This status matters. A successful inventory does not mean the account passed a full security or compliance audit.
 
@@ -72,6 +73,10 @@ The implemented code can:
 - Detect eight common community files through GitHub's community-profile and contents metadata endpoints without cloning or reading file content.
 - Distinguish compliant, noncompliant, observed, unknown, and inaccessible outcomes with a terminal coverage state for every check.
 - Produce privacy-safe repository findings with stable check IDs, exact current and desired states, evidence, severity, and remediation class.
+- Run the complete account audit from one CLI command and continue across repository-specific failures.
+- Apply include and exclude patterns before requesting repository audit endpoints.
+- Aggregate schema-versioned JSON or Markdown bindings, results, findings, severity counts, accepted permissions, and coverage.
+- Exit with code `0`, `1`, or `2` based on complete coverage and the configured finding threshold.
 
 ## What the tool does not do
 
@@ -83,8 +88,6 @@ The current version does not:
 - Enable or disable GitHub security features.
 - Dismiss security alerts.
 - Clone repository content during inventory.
-- Run metadata and community-file checks from the public CLI. The check layer currently requires library integration.
-- Apply the resolved policy across an account-wide audit.
 - Infer flagship or exempt maintenance tiers without explicit future override rules.
 - Schedule unattended runs.
 - Create backups.
@@ -181,7 +184,7 @@ If `uv sync --locked --dev` would require a lockfile change, it stops instead. T
 
 ## Create a GitHub token
 
-The implemented commands use a discovery credential. Use a fine-grained personal access token with the smallest practical access.
+The implemented commands use discovery and audit credential references. Use fine-grained personal access tokens with the smallest practical access. A single read-only token may be stored under both references, or you may create separate tokens.
 
 GitHub's current token steps are documented in [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 
@@ -194,11 +197,11 @@ GitHub's current token steps are documented in [Managing your personal access to
 7. Set an expiration date.
 8. Select the personal account or organization that owns the repositories you want to inventory.
 9. Select all repositories or only the repositories that should be visible to this tool.
-10. Grant repository **Metadata** permission with read access.
+10. Grant repository **Metadata** permission with read access. Also grant repository **Contents** read access if the token will run `audit`.
 11. Do not grant write permissions for the current release.
 12. Generate the token and copy it once.
 
-The implemented `GET /user` call does not require an additional fine-grained permission. The implemented `GET /user/repos` inventory call requires repository **Metadata: read** access. See GitHub's official endpoint documentation for [the authenticated user](https://docs.github.com/en/rest/users/users#get-the-authenticated-user) and [repository inventory](https://docs.github.com/en/rest/repos/repos#list-repositories-for-the-authenticated-user).
+The implemented `GET /user` call does not require an additional fine-grained permission. Inventory requires repository **Metadata: read** access. The audit also lists community-file metadata and directories, which requires repository **Contents: read** access. See GitHub's official endpoint documentation for [the authenticated user](https://docs.github.com/en/rest/users/users#get-the-authenticated-user) and [repository inventory](https://docs.github.com/en/rest/repos/repos#list-repositories-for-the-authenticated-user).
 
 Important token limitations:
 
@@ -225,6 +228,14 @@ uv run keyring set github-account-maintainer discovery
 ```
 
 The command prompts for a password. Paste the GitHub token at that prompt. The token is stored by the active system keyring backend, which is normally Windows Credential Manager on Windows. It is not written to the project configuration.
+
+To run the full audit, also store a token under the audit account:
+
+```powershell
+uv run keyring set github-account-maintainer audit
+```
+
+That token needs Metadata and Contents read access. If one least-privilege token has both permissions, you may paste the same token into both prompts.
 
 You can inspect keyring diagnostics without printing the token:
 
@@ -380,6 +391,39 @@ nonpublic-repository:123456789
 
 Its URL is omitted. Public repository names and URLs are not redacted.
 
+## Audit repositories
+
+After both credentials are stored, run the complete read-only audit:
+
+```powershell
+uv run github-account-maintainer audit --format markdown
+$LASTEXITCODE
+```
+
+The command performs this sequence:
+
+1. Verifies the discovery credential and inventories every repository in declared affiliation and visibility scope.
+2. Verifies the separate audit credential against the configured GitHub login.
+3. Applies `repositories.include_patterns` and `repositories.exclude_patterns`.
+4. Reads repository metadata and language totals for deterministic classification.
+5. Resolves and hashes the effective policy for that repository.
+6. Runs six metadata checks and eight community-file checks.
+7. Continues to the next repository if one repository is inaccessible or returns invalid evidence.
+8. Aggregates policy bindings, results, findings, permissions, and terminal coverage.
+9. Evaluates findings against `audit.failure_threshold`.
+
+JSON is the default and is intended for local automation:
+
+```powershell
+uv run github-account-maintainer audit --format json |
+  Set-Content -Path .\account-audit.json -Encoding utf8
+$auditExitCode = $LASTEXITCODE
+```
+
+Treat saved audit reports as private local data. Minimal mode redacts private and internal names, but reports still contain public repository names, numeric repository IDs, policy decisions, findings, and operational coverage.
+
+Exit code `0` means complete coverage with no finding at or above the configured threshold. Code `1` means complete coverage with a threshold finding. Code `2` means coverage is partial, even if findings were also produced. Code `3` means the configuration or command input is invalid.
+
 ## Command reference
 
 ### Global command
@@ -426,14 +470,23 @@ This command verifies identity and then reads every page returned by `GET /user/
 ### `audit`
 
 ```powershell
-uv run github-account-maintainer audit
+uv run github-account-maintainer audit [--config PATH] [--format json|markdown]
 ```
 
-This command is reserved. It prints an incomplete-implementation message and exits with code `2`. It does not run a partial audit and it does not change GitHub.
+This command inventories repositories with the discovery credential, verifies the separate audit credential, applies repository scope patterns, classifies each in-scope repository, binds its effective policy, runs 14 checks, and aggregates the result. It uses only GET requests and does not change GitHub.
+
+For a readable report:
+
+```powershell
+uv run github-account-maintainer audit --format markdown
+$LASTEXITCODE
+```
+
+The command continues when one repository is inaccessible or malformed. The final report marks every affected check with terminal coverage and exits with code `2` so partial evidence cannot look complete.
 
 ## Repository check foundation
 
-FUT-002 provides the read-only repository check layer that the future account-level `audit` command will call. It is library code today. A novice user does not need to invoke Python functions directly. Wait for FUT-003 if you need one command that inventories and audits the full account.
+FUT-002 provides the read-only repository check layer used by the account-level `audit` command.
 
 The layer performs 14 stable checks:
 
@@ -460,7 +513,7 @@ It does not clone repositories or request file bodies. Inherited community files
 
 ## Classification and policy binding
 
-FUT-014 provides the deterministic layer between inventory and the future account-level audit command. It is library code. FUT-003 will orchestrate it across every inventoried repository.
+FUT-014 provides the deterministic layer between inventory and repository checks. FUT-003 now orchestrates it across every in-scope inventoried repository.
 
 The classifier evaluates seven dimensions:
 
@@ -501,7 +554,8 @@ The configuration is strict YAML. Indentation matters. Unknown fields, invalid v
 | `credentials` | Stores credential references. It must never contain literal secrets. |
 | `local_data` | Defines local directories, report detail, and retention values. |
 | `safety` | Enforces non-overridable write and approval boundaries. |
-| `repositories` | Supplies account-wide repository policy defaults. Include and exclude patterns are not yet applied by inventory. |
+| `audit` | Sets the finding severity that makes a complete audit exit with code `1`. |
+| `repositories` | Supplies account-wide repository policy defaults. Include and exclude patterns are applied by `audit`. |
 | `pins` | Validated policy for the planned profile-pin feature. Not active yet. |
 | `readme` | Validated policy for planned README checks and remediation. Not active yet. |
 | `metadata` | Active desired-state policy for the repository metadata check layer. |
@@ -573,7 +627,30 @@ credentials:
   browser_profile: disabled
 ```
 
-The current `auth check` and `inventory` commands use only `credentials.discovery`. The repository check library resolves `credentials.audit`, verifies its identity with `GET /user`, and never falls back to the discovery or remediation credential.
+The `auth check` and `inventory` commands use only `credentials.discovery`. The `audit` command uses discovery for inventory and `credentials.audit` for repository evidence. It verifies both identities and never falls back to the discovery or remediation credential for checks.
+
+Store the audit token after storing the discovery token:
+
+```powershell
+uv run keyring set github-account-maintainer audit
+```
+
+The audit token needs read access to repository Metadata and Contents for every repository in scope. You may store the same least-privilege token under both keyring accounts, but separate credentials make the access boundary explicit.
+
+### Audit threshold and repository scope
+
+The default threshold is `low`:
+
+```yaml
+audit:
+  failure_threshold: low
+repositories:
+  include_patterns:
+    - "*"
+  exclude_patterns: []
+```
+
+Valid thresholds are `informational`, `low`, `medium`, `high`, and `critical`. Matching is case-insensitive and uses shell-style wildcard patterns against `owner/repository`. An excluded repository remains in inventory coverage but its classification and checks are marked `not_requested`.
 
 ### Report privacy
 
@@ -654,9 +731,9 @@ Resolution produces:
 - A trace containing each value, source layer, and source key.
 - A canonical SHA-256 policy hash.
 
-Equivalent policy inputs produce the same resolved result and hash. The current CLI validates this configuration, but the reserved `audit` command does not invoke the resolver yet.
+Equivalent policy inputs produce the same resolved result and hash. The `audit` command resolves and records one binding for each successfully classified in-scope repository.
 
-The classification layer now supplies `repository_class` and `project_type` automatically when library callers bind a repository. FUT-003 will connect that binding to account-wide CLI execution.
+The classification layer supplies `repository_class` and `project_type` automatically during account-wide CLI execution.
 
 The built-in metadata policy requires a description, at least one topic, and a primary language. Homepage is optional. The built-in community policy requires README, LICENSE, and SECURITY files. CONTRIBUTING, CODE_OF_CONDUCT, SUPPORT, issue templates, and pull request templates are optional unless a matching policy layer makes them required.
 
@@ -664,12 +741,12 @@ The built-in metadata policy requires a description, at least one topic, and a p
 
 ### Output formats
 
-`auth check` and `inventory` support:
+`auth check`, `inventory`, and `audit` support:
 
 - `json`: Machine-readable output. This is the default.
 - `markdown`: Human-readable output.
 
-The repository check library also has schema-versioned JSON and Markdown renderers. Its report includes the policy hash, sanitized repository display name, credential source, accepted GitHub permissions, all results, terminal coverage, and findings. FUT-003 will expose those reports through the account-level CLI.
+The account audit report includes sanitized repository displays, classification and policy hashes, all check results, finding counts by severity, exact current and desired states, remediation details, accepted GitHub permissions, and terminal coverage. Internal selectors for private repositories are used only in memory and are not serialized in minimal mode.
 
 Classification and policy binding also have schema-versioned JSON and Markdown renderers. They include confidence and hashes without exposing raw private classification inputs.
 
@@ -677,12 +754,12 @@ Classification and policy binding also have schema-versioned JSON and Markdown r
 
 | Code | Meaning | Typical action |
 | --- | --- | --- |
-| `0` | The requested implemented command completed successfully. | Review the report. |
-| `1` | Reserved for a completed future audit with findings above its configured failure threshold. | Review findings. |
-| `2` | The run was incomplete or failed operationally. | Check authentication, authorization, rate limits, network access, coverage details, or command availability. |
+| `0` | The command completed, coverage is complete, and no audit finding reached the configured threshold. | Review the report. |
+| `1` | The audit completed and at least one finding reached the configured threshold. | Review and prioritize findings. |
+| `2` | The run was incomplete or failed operationally. Partial status takes precedence over findings. | Check authentication, authorization, rate limits, network access, and coverage details. |
 | `3` | The command, configuration, policy, plan, or approval is invalid. | Correct the input before retrying. |
 
-A partial inventory always exits with code `2`, even if it returns some repository records. Do not treat partial output as complete coverage.
+A partial inventory or audit always exits with code `2`, even if it returns repository records or findings. Do not treat partial output as complete coverage.
 
 To inspect the last exit code in PowerShell:
 
@@ -842,7 +919,6 @@ When a tracked upgrade is implemented:
 
 The remaining Release 0.1 work is:
 
-1. Implement the schema-versioned account-level `audit` command, orchestration, aggregation, and documented exit behavior.
-2. Validate the complete read-only Release 0.1 gate with contract fixtures and a local pilot.
+1. Validate the complete read-only Release 0.1 gate with contract fixtures and a local pilot.
 
 No remediation work begins until the read-only Release 0.1 gate passes.

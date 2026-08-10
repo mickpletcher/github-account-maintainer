@@ -6,6 +6,11 @@ This file records every repository change, including code, documentation, config
 
 ### Added
 
+- Added FUT-003 account-wide audit orchestration with separate discovery and audit credentials, internal private repository targets, classification, policy binding, and 14 checks per in-scope repository.
+- Added schema-versioned aggregate JSON and detailed Markdown reports containing sanitized bindings, exact results, findings, severity counts, accepted permissions, and terminal coverage.
+- Added configurable audit finding thresholds and deterministic exit codes `0`, `1`, and `2`, with incomplete coverage taking precedence over findings.
+- Added case-insensitive repository include and exclude pattern enforcement with explicit `not_requested` coverage.
+- Added multi-repository contract tests for GET-only operation, metadata reuse, private-name redaction, exclusions, findings, inaccessible repositories, malformed evidence, report rendering, and CLI exit behavior.
 - Added FUT-014 deterministic classification for visibility, activity, repository kind, ownership, project type, repository class, and maintenance tier.
 - Added per-dimension confidence, sanitized evidence, audited coverage, canonical classification hashes, and tamper detection.
 - Added strict parsing for synthetic GitHub repository metadata and language-response fixtures while excluding raw topics and language names from serialization.
@@ -27,6 +32,9 @@ This file records every repository change, including code, documentation, config
 
 ### Changed
 
+- Moved FUT-003 to `completed-upgrades.md`, added FUT-016 audit report compatibility and migration tooling to Tier 2, and synchronized the README and assessment.
+- Refactored inventory collection to retain private API selectors only in a non-serializable internal snapshot while preserving the existing redacted inventory report contract.
+- Allowed account orchestration to pass already validated repository metadata into the check layer, avoiding a duplicate metadata request and preventing classification/check observation drift.
 - Moved FUT-014 to `completed-upgrades.md`, added FUT-015 classification overrides and drift diagnostics to Tier 2, and synchronized the README and assessment.
 - Moved FUT-002 to `completed-upgrades.md`, added FUT-014 repository classification and policy binding to Tier 1, and synchronized the README and assessment.
 - Documented the repository check foundation, audit-credential boundary, policy defaults, outcome vocabulary, report contents, privacy behavior, and remaining account-audit work.
