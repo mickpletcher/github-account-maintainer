@@ -113,6 +113,10 @@ class RepositoryConfig(StrictModel):
     exclude_patterns: list[str] = []
 
 
+class AuditConfig(StrictModel):
+    failure_threshold: Literal["informational", "low", "medium", "high", "critical"] = "low"
+
+
 class PinConfig(StrictModel):
     mode: Literal["top_stars"] = "top_stars"
     count: Annotated[int, Field(ge=1, le=6)] = 6
@@ -344,6 +348,7 @@ class AppConfig(StrictModel):
     credentials: CredentialConfig = CredentialConfig()
     local_data: LocalDataConfig
     safety: SafetyConfig = SafetyConfig()
+    audit: AuditConfig = AuditConfig()
     repositories: RepositoryConfig = RepositoryConfig()
     pins: PinConfig = PinConfig()
     readme: ReadmeConfig = ReadmeConfig()

@@ -14,6 +14,7 @@ def test_default_config_uses_hard_safety_invariants() -> None:
     assert config.safety.automatic_write_operations == ()
     assert config.backup.enabled is False
     assert config.credentials.remediation == "disabled"
+    assert config.audit.failure_threshold == "low"
     assert config.metadata.description == "required"
     assert config.metadata.minimum_topics == 1
     assert config.community.readme == "required"

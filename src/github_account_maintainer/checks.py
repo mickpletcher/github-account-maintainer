@@ -120,18 +120,23 @@ def run_repository_checks(
     policy: ResolvedPolicy,
     *,
     credential_source: str,
+    repository_metadata: JsonObject | None = None,
+    initial_permissions: tuple[str, ...] = (),
     now: Callable[[], datetime] | None = None,
 ) -> RepositoryAuditReport:
     clock = now or (lambda: datetime.now(UTC))
     started_at = clock()
-    permissions: set[str] = set()
+    permissions: set[str] = set(initial_permissions)
     results: list[CheckResult] = []
     findings: list[Finding] = []
 
     try:
-        response = client.get(f"/repos/{target.api_name}")
-        _record_permissions(response, permissions)
-        metadata = _json_object(response)
+        if repository_metadata is None:
+            response = client.get(f"/repos/{target.api_name}")
+            _record_permissions(response, permissions)
+            metadata = _json_object(response)
+        else:
+            metadata = repository_metadata
         repository_state = _parse_repository_metadata(metadata, target.repository_id)
     except (GitHubApiError, GitHubTransportError, TypeError, ValueError) as error:
         if isinstance(error, GitHubApiError) and error.accepted_permissions:

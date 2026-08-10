@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal, cast
 
@@ -26,15 +27,41 @@ class InventoryCollectionError(RuntimeError):
     pass
 
 
+@dataclass(frozen=True)
+class InventoryTarget:
+    record: RepositoryInventoryRecord
+    api_name: str
+
+
+@dataclass(frozen=True)
+class InventorySnapshot:
+    report: InventoryReport
+    targets: tuple[InventoryTarget, ...]
+
+
 def collect_inventory(
     config: AppConfig,
     *,
     credential_resolver: CredentialResolver = resolve_credential,
     make_client: ClientFactory = client_factory,
 ) -> InventoryReport:
+    return collect_inventory_snapshot(
+        config,
+        credential_resolver=credential_resolver,
+        make_client=make_client,
+    ).report
+
+
+def collect_inventory_snapshot(
+    config: AppConfig,
+    *,
+    credential_resolver: CredentialResolver = resolve_credential,
+    make_client: ClientFactory = client_factory,
+) -> InventorySnapshot:
     started_at = datetime.now(UTC)
     credential = credential_resolver(config.credentials.discovery)
     records: dict[int, RepositoryInventoryRecord] = {}
+    targets: dict[int, InventoryTarget] = {}
     coverage: list[CoverageRecord] = []
     permissions: set[str] = set()
     pages_read = 0
@@ -51,11 +78,13 @@ def collect_inventory(
                 if permission_header:
                     permissions.add(permission_header)
                 for item in items:
-                    record = _repository_record(item, detail=config.local_data.report_detail)
+                    target = _repository_target(item, detail=config.local_data.report_detail)
+                    record = target.record
                     if record.repository_id in records:
                         duplicates_removed += 1
                         continue
                     records[record.repository_id] = record
+                    targets[record.repository_id] = target
                     coverage.append(
                         CoverageRecord(
                             repository_id=record.repository_id,
@@ -87,7 +116,7 @@ def collect_inventory(
         )
     )
 
-    return InventoryReport(
+    report = InventoryReport(
         tool_version=__version__,
         github_api_version=GITHUB_API_VERSION,
         account_display=config.account.login,
@@ -102,6 +131,10 @@ def collect_inventory(
         repositories=tuple(sorted(records.values(), key=lambda item: item.repository_id)),
         coverage=tuple(coverage),
     )
+    return InventorySnapshot(
+        report=report,
+        targets=tuple(sorted(targets.values(), key=lambda item: item.record.repository_id)),
+    )
 
 
 def _inventory_params(config: AppConfig) -> dict[str, str | int]:
@@ -114,7 +147,7 @@ def _inventory_params(config: AppConfig) -> dict[str, str | int]:
     }
 
 
-def _repository_record(payload: dict[str, object], *, detail: str) -> RepositoryInventoryRecord:
+def _repository_target(payload: dict[str, object], *, detail: str) -> InventoryTarget:
     repository_id = payload.get("id")
     node_id = payload.get("node_id")
     full_name = payload.get("full_name")
@@ -139,7 +172,7 @@ def _repository_record(payload: dict[str, object], *, detail: str) -> Repository
 
     normalized_visibility = cast(Literal["public", "private", "internal"], visibility)
     redact = normalized_visibility != "public" and detail == "minimal"
-    return RepositoryInventoryRecord(
+    record = RepositoryInventoryRecord(
         repository_id=repository_id,
         node_id=node_id,
         display_name=f"nonpublic-repository:{repository_id}" if redact else full_name,
@@ -150,6 +183,7 @@ def _repository_record(payload: dict[str, object], *, detail: str) -> Repository
         html_url=None if redact else html_url,
         permissions=_permissions(payload.get("permissions")),
     )
+    return InventoryTarget(record=record, api_name=full_name)
 
 
 def _permissions(value: object) -> RepositoryPermissions:

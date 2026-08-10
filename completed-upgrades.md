@@ -12,6 +12,15 @@ This file is the permanent record of upgrades completed from `future-upgrades.md
 
 ## Completed
 
+### FUT-003: Account audit command and schema reports
+
+- Former tier: Tier 1, Release critical
+- Completed: 2026-08-10
+- Pull request or commit: This pull request
+- Delivered: Added the public account-level `audit` command; separate discovery and audit credential preflights; private internal inventory targets; include and exclude scope enforcement; deterministic classification and per-repository policy binding; 14-check orchestration using shared validated metadata; continuation across repository failures; aggregated bindings, results, findings, accepted permissions, and terminal coverage; schema-versioned JSON and detailed Markdown reports; configurable severity thresholds; and exit codes `0`, `1`, and `2` with partial coverage taking precedence.
+- Verification: Multi-repository synthetic GitHub contract tests cover public and private repositories, private-name redaction, GET-only requests, metadata reuse, scope exclusions, configurable thresholds, complete findings, inaccessible repositories, malformed classification evidence, account Markdown output, and CLI exit behavior. Ruff, strict Pyright, and 119 pytest tests pass with 94.30% coverage.
+- Replacement idea: FUT-016 audit report compatibility and migration tooling was added to Tier 2.
+
 ### FUT-014: Repository classification and policy binding
 
 - Former tier: Tier 1, Release critical

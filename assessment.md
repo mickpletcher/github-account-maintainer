@@ -2,11 +2,11 @@
 
 **Last reviewed:** 2026-08-10  
 **Current release:** `0.1.0.dev0`  
-**Overall status:** Read-only authentication, inventory, deterministic classification, policy binding, and repository metadata and community-file checks are functional. The account-level Release 0.1 audit workflow is not finished.
+**Overall status:** The read-only account audit is functional from inventory through classification, policy binding, repository checks, aggregation, reporting, and exit evaluation. The Release 0.1 local pilot remains.
 
 ## Quick overview
 
-GitHub Account Maintainer is a local-first Python CLI and library for auditing GitHub account resources against an explicit policy. It verifies configured identities, inventories repositories, validates ephemeral metadata evidence, classifies seven repository dimensions with confidence and stable hashes, binds repository class and project type into strict layered policy, and evaluates metadata and common community-file presence. Reports preserve explicit coverage and privacy-safe findings while redacting non-public repository identities by default.
+GitHub Account Maintainer is a local-first Python CLI and library for auditing GitHub account resources against an explicit policy. It verifies separate discovery and audit credentials, inventories repositories, applies declared scope, validates ephemeral metadata evidence, classifies seven repository dimensions with confidence and stable hashes, binds repository class and project type into strict layered policy, and evaluates metadata and common community-file presence. Account reports preserve exact terminal coverage, threshold evaluation, and privacy-safe findings while redacting non-public repository identities by default.
 
 The implemented GitHub path is serial and GET-only. It cannot modify repositories, account settings, branches, pull requests, security settings, or other GitHub resources.
 
@@ -17,7 +17,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 | `init` | Implemented | Creates a strict local configuration without overwriting an existing file unless explicitly requested. |
 | `auth check` | Implemented | Resolves the discovery credential, calls `GET /user`, and verifies the authenticated login. |
 | `inventory` | Implemented | Enumerates repositories through paginated `GET /user/repos` requests within declared affiliations and visibility. |
-| `audit` | Reserved | Exits with code `2`; repository checks exist as library code but account orchestration is not connected yet. |
+| `audit` | Implemented | Runs the complete read-only account workflow and emits schema-versioned JSON or Markdown with exit codes `0`, `1`, or `2`. |
 
 ## Implemented capabilities
 
@@ -43,9 +43,12 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Fail-closed inventory/evidence identity and state matching, canonical-value enforcement, hash verification, and classification/policy timestamp binding.
 - Automatic repository-class and project-type policy binding with repository-specific precedence preserved.
 - Privacy-safe schema-versioned JSON and Markdown classification and binding records.
+- Account-wide orchestration that reuses validated metadata for classification and checks, continues across repository-specific failures, and aggregates bindings, results, findings, permissions, and coverage.
+- Case-insensitive include and exclude pattern enforcement with `not_requested` coverage for repositories outside declared audit scope.
+- Configurable finding threshold with severity counts and deterministic exit codes: `0` for a clean complete run, `1` for a complete run at or above threshold, and `2` for partial coverage.
 - Minimal report mode that replaces private and internal repository names with stable numeric labels and removes their URLs.
 - Structured JSON and Markdown authentication and inventory reports.
-- Stable CLI exit codes: `0` for success, `2` for incomplete or operational failure, and `3` for invalid configuration or input. Exit code `1` is reserved for completed audits with findings above the configured threshold.
+- Stable CLI exit codes: `0` for complete below-threshold results, `1` for complete audits at or above threshold, `2` for incomplete or operational failure, and `3` for invalid configuration or input.
 
 ## Safety and privacy assessment
 
@@ -54,6 +57,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Repository checks inspect metadata and directory listings only. They do not clone repositories or read file bodies.
 - Check reports store counts and presence indicators instead of description text, homepage URLs, topic names, language names, file paths, or file content.
 - Raw topics, language names, and internal repository selectors are excluded from classification evidence serialization and policy-binding reports.
+- Private repository selectors are retained only in an internal inventory snapshot long enough to make audit GET requests and are never serialized in minimal account reports.
 - The automatic-write allowlist is empty.
 - Automatic merge and destructive operations are prohibited by the configuration schema.
 - Policy patches do not expose safety controls, so repository policy and exceptions cannot override hard safety invariants.
@@ -66,11 +70,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 
 ## Known limitations
 
-- Account-level report aggregation, finding-threshold evaluation, and CLI exit behavior are not implemented.
-- The implemented repository check layer is library code and is not directly available as a CLI command.
-- Classification and policy binding are library code and are not connected to the reserved account-level `audit` command.
 - Flagship and exempt maintenance tiers require explicit override support that is not implemented yet.
-- Account-wide check orchestration and aggregation are not implemented.
 - No state database, scheduling, planning, approval, remediation, rollback, browser automation, backup, or notification workflow is implemented.
 - The tool does not yet satisfy the complete Release 0.1 local pilot gate in the project specification.
 
@@ -79,7 +79,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Ruff lint passes.
 - Ruff formatting checks pass.
 - Strict Pyright checks pass with no errors.
-- Pytest passes 111 tests with 94.52% total coverage.
+- Pytest passes 119 tests with 94.30% total coverage.
 - The lockfile is reproducible with `uv lock --check`.
 - GitHub Actions uses read-only permissions, pinned action SHAs, non-persistent checkout credentials, stale-run cancellation, and a job timeout.
 - CodeQL scans Python and GitHub Actions sources.
@@ -91,9 +91,9 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 
 ## Next priorities
 
-1. Implement the account-level audit command with classification, policy binding, check orchestration, coverage aggregation, and exit-code behavior.
-2. Validate the full Release 0.1 gate with a local read-only pilot.
-3. Add explicit classification overrides and classification-drift diagnostics.
+1. Validate the full Release 0.1 gate with a local read-only pilot.
+2. Add explicit classification overrides and classification-drift diagnostics.
+3. Expand settings and security coverage with permission-aware evidence.
 
 ## Required maintenance
 
@@ -101,4 +101,4 @@ Every repository change must update this file and `changelog.md` in the same com
 
 When an upgrade is implemented, move its stable ID from `future-upgrades.md` to `completed-upgrades.md`, record the delivery and verification evidence, and add at least one new upgrade idea to the future backlog in the same pull request.
 
-**Latest assessment change:** Added FUT-014 deterministic repository classification, confidence and classification hashes, validated GitHub evidence parsing, privacy-safe policy-binding records, and automatic repository-class and project-type policy selection.
+**Latest assessment change:** Added FUT-003 account audit orchestration, scope enforcement, aggregated schema reports, finding-threshold evaluation, private selector isolation, and complete/partial exit behavior.

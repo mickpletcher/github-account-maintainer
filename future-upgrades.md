@@ -19,10 +19,6 @@ Priority can change as the project develops. Moving an unimplemented item betwee
 
 These upgrades directly unblock the read-only Release 0.1 gate.
 
-### FUT-003: Account audit command and schema reports
-
-Implement the account-level `audit` command with finding evaluation, complete coverage reporting, schema-versioned JSON, Markdown output, and documented exit-code behavior.
-
 ### FUT-004: Release 0.1 pilot verification
 
 Add contract fixtures and a local read-only pilot procedure that verifies the full Release 0.1 gate without mutating GitHub resources or exposing private repository details.
@@ -54,6 +50,10 @@ Report unused policy layers, redundant overrides, unmatched selectors, and excep
 ### FUT-015: Classification overrides and drift diagnostics
 
 Add strict lifecycle-threshold settings and explicit flagship, exempt, and maintenance-tier overrides. Report classification changes between runs without allowing low-confidence evidence to silently select a different policy.
+
+### FUT-016: Audit report compatibility and migration tooling
+
+Validate stored report schema compatibility across tool versions and provide deterministic local migrations without weakening hashes, privacy redaction, or terminal coverage semantics.
 
 ## Tier 3: Strategic
 
