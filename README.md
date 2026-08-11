@@ -468,6 +468,8 @@ A partial audit never resolves an absent finding. Missing evidence is not proof 
 
 Runs must match the configured account and be recorded in chronological order. Re-recording the same semantic audit is idempotent and does not duplicate events. The tool rejects a database created by a newer schema. When an older nonempty database needs an upgrade, the tool checks database integrity, creates a timestamped backup under the local state directory, and applies each numbered migration in its own transaction.
 
+If enabled history recording fails, `audit` still writes its complete JSON or Markdown report to stdout. It writes a sanitized history error to stderr and exits with code `2` so automation cannot mistake missing requested history for full success.
+
 ## Run the Release 0.1 pilot
 
 The Release 0.1 pilot verifies the locked build and then runs the live audit twice. It emits only counts and pass/fail state. Detailed audit reports stay in memory and are not written to disk.

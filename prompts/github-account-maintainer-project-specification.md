@@ -866,6 +866,8 @@ The final schema rejects unknown fields and incompatible combinations. Hard safe
 
 The implemented FUT-006 baseline records sanitized account audit runs and finding transitions in `%LOCALAPPDATA%\GitHubAccountMaintainer\state\audit-history.sqlite3` on Windows or the corresponding `platformdirs` state path. Automatic recording is enabled by default, can be disabled in configuration, and can be skipped for one audit with `--no-history`. The read-only `history` command returns recent run and transition counts without contacting GitHub or exposing local paths.
 
+An enabled history-persistence failure does not discard the completed audit report. The CLI emits the full selected report format to stdout, emits a sanitized history error to stderr, and exits `2` because the requested operation was incomplete.
+
 The baseline binds each report to the configured account and stores a hashed account identity, numeric repository IDs, stable check metadata, one-way state hashes, timestamps, run counts, and `new`, `persistent`, `resolved`, or `regressed` transition events. It does not store account or repository names, credential references, URLs, finding evidence, or raw current and desired values. Only a complete audit can resolve a previously active finding. A partial audit records observed findings but cannot treat absent evidence as resolution. Semantically identical runs are idempotent, and mismatched-account or out-of-order runs fail closed.
 
 The state database records:

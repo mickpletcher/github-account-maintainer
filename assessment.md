@@ -85,6 +85,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - History paths inside a Git worktree, symbolic links, junctions, irregular database files, and irregular migration-backup directories fail closed.
 - Repository ignore rules exclude SQLite databases, journal files, write-ahead logs, shared-memory files, and migration-backup directories as defense in depth.
 - Partial audits never resolve absent findings. Re-recording an identical run is idempotent, and out-of-order runs are rejected.
+- A history persistence failure preserves the completed audit report on stdout, emits only a sanitized error on stderr, and forces exit code `2`.
 - Default application data paths resolve outside the source repository.
 
 ## Known limitations
@@ -100,7 +101,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Ruff lint passes.
 - Ruff formatting checks pass.
 - Strict Pyright checks pass with no errors.
-- Pytest passes 150 tests with 93.20% total coverage.
+- Pytest passes 151 tests with 93.21% total coverage.
 - The lockfile is reproducible with `uv lock --check`.
 - GitHub Actions uses read-only permissions, pinned action SHAs, non-persistent checkout credentials, stale-run cancellation, and a job timeout.
 - CodeQL scans Python and GitHub Actions sources.
@@ -123,4 +124,4 @@ Every repository change must update this file and `changelog.md` in the same com
 
 When an upgrade is implemented, move its stable ID from `future-upgrades.md` to `completed-upgrades.md`, record the delivery and verification evidence, and add at least one new upgrade idea to the future backlog in the same pull request.
 
-**Latest assessment change:** Recorded FUT-006 sanitized local SQLite history, transition semantics, migration and path safeguards, the `history` command, and 150-test verification at 93.20% coverage.
+**Latest assessment change:** Recorded FUT-006 sanitized local SQLite history, transition semantics, migration and path safeguards, the `history` command, and 151-test verification at 93.21% coverage.

@@ -46,7 +46,7 @@ This file records every repository change, including code, documentation, config
 ### Changed
 
 - Moved FUT-006 to `completed-upgrades.md`, added FUT-019 audit-history integrity verification and recovery planning to Tier 2, and synchronized the project prompt, README, assessment, changelog, and upgrade ledgers.
-- Updated `audit` to record sanitized local history after GitHub reads while preserving its JSON and Markdown output contracts and exit-code precedence. Partial audits are recorded but cannot resolve findings that were not observed.
+- Updated `audit` to record sanitized local history after GitHub reads while preserving its JSON and Markdown output contracts and exit-code precedence. Partial audits are recorded but cannot resolve findings that were not observed. A history write failure preserves the audit report, emits a sanitized stderr error, and exits `2`.
 - Expanded each in-scope repository audit from 14 to 26 deterministic checks while preserving GET-only requests, serial execution, minimal-detail redaction, stable findings, and exact terminal coverage.
 - Classified private repository branch and security restrictions as `unavailable_by_plan` and archived code scanning as `not_applicable`, while preserving fail-closed `inaccessible` behavior for actual public or credential authorization failures.
 - Treated HTTP 204 from the automated security-fixes endpoint as enabled, preserved unknown classic branch requirements when protection evidence is inaccessible, and treated confirmed disabled code scanning as supported noncompliance instead of plan unavailability.

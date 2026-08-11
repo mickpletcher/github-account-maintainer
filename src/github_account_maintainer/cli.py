@@ -112,20 +112,20 @@ def audit(
     config = load_app_config(config_path or default_config_path())
     try:
         report = run_account_audit(config)
-        if config.history.enabled and not no_history:
-            record_audit_history(config, report)
-    except (
-        CredentialResolutionError,
-        AuthenticationPreflightError,
-        GitHubApiError,
-        GitHubTransportError,
-        HistoryError,
-    ) as error:
+    except (CredentialResolutionError, AuthenticationPreflightError, GitHubApiError, GitHubTransportError) as error:
         fail_operational(error)
+    history_error: HistoryError | None = None
+    if config.history.enabled and not no_history:
+        try:
+            record_audit_history(config, report)
+        except HistoryError as error:
+            history_error = error
     typer.echo(
         render_json(report) if output_format is OutputFormat.JSON else render_account_audit_markdown(report),
         nl=False,
     )
+    if history_error is not None:
+        fail_operational(history_error)
     exit_code = audit_exit_code(report)
     if exit_code:
         raise typer.Exit(exit_code)

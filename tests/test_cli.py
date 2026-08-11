@@ -11,7 +11,7 @@ from github_account_maintainer.cli import app
 from github_account_maintainer.config import AppConfig
 from github_account_maintainer.constants import GITHUB_API_VERSION
 from github_account_maintainer.credentials import CredentialResolutionError
-from github_account_maintainer.history import AuditHistoryReport, HistoryWriteResult
+from github_account_maintainer.history import AuditHistoryReport, HistoryError, HistoryWriteResult
 from github_account_maintainer.models import (
     AuthReport,
     CoverageRecord,
@@ -133,6 +133,26 @@ def test_audit_records_sanitized_history_by_default(tmp_path: Path, monkeypatch:
 
     assert result.exit_code == 0
     assert recorded == [report]
+
+
+def test_audit_history_failure_preserves_report_and_exits_two(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    config_path = create_config(tmp_path)
+    report = account_audit_report(RunStatus.COMPLETE, threshold_met=False)
+
+    def run_audit(_config: AppConfig) -> AccountAuditReport:
+        return report
+
+    def fail_history(_config: AppConfig, _report: AccountAuditReport) -> HistoryWriteResult:
+        raise HistoryError("Audit history operation failed: OSError")
+
+    monkeypatch.setattr(cli_module, "run_account_audit", run_audit)
+    monkeypatch.setattr(cli_module, "record_audit_history", fail_history)
+
+    result = runner.invoke(app, ["audit", "--config", str(config_path)])
+
+    assert result.exit_code == 2
+    assert '"status": "complete"' in result.stdout
+    assert "Audit history operation failed: OSError" in result.stderr
 
 
 def test_history_command_outputs_sanitized_summary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
