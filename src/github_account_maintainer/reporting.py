@@ -2,6 +2,7 @@ import json
 
 from github_account_maintainer.account_audit import AccountAuditReport
 from github_account_maintainer.classification import RepositoryPolicyBindingRecord
+from github_account_maintainer.history import AuditHistoryReport
 from github_account_maintainer.models import AuthReport, InventoryReport, RepositoryAuditReport, RunReport
 
 
@@ -11,7 +12,8 @@ def render_json(
     | InventoryReport
     | RepositoryAuditReport
     | RepositoryPolicyBindingRecord
-    | AccountAuditReport,
+    | AccountAuditReport
+    | AuditHistoryReport,
 ) -> str:
     return report.model_dump_json(indent=2)
 
@@ -232,4 +234,28 @@ def render_account_audit_markdown(report: AccountAuditReport) -> str:
         f"`{record.check_id}`: `{record.state.value}`" + (f" ({record.detail})" if record.detail else "")
         for record in report.coverage
     )
+    return "\n".join(lines) + "\n"
+
+
+def render_history_markdown(report: AuditHistoryReport) -> str:
+    lines = [
+        "# Sanitized Audit History",
+        "",
+        f"- Database schema version: `{report.schema_version}`",
+        f"- Stored runs: `{report.total_run_count}`",
+        f"- Returned runs: `{report.returned_run_count}`",
+        "",
+        "## Runs",
+        "",
+    ]
+    if not report.runs:
+        lines.append("No audit runs have been recorded for this configured account.")
+    else:
+        lines.extend(
+            f"- `{run.completed_at.isoformat()}` `{run.status.value}`: repositories=`{run.repository_count}`; "
+            f"audited=`{run.audited_repository_count}`; findings=`{run.finding_count}`; "
+            f"new=`{run.new}`; persistent=`{run.persistent}`; resolved=`{run.resolved}`; "
+            f"regressed=`{run.regressed}`; run=`{run.run_id}`"
+            for run in report.runs
+        )
     return "\n".join(lines) + "\n"

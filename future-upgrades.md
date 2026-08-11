@@ -25,10 +25,6 @@ No pending upgrades. The expanded private live pilot passed and remains document
 
 These upgrades broaden useful audit coverage and make repeated audits reliable.
 
-### FUT-006: Local audit history and finding transitions
-
-Store sanitized audit history in a versioned local SQLite database. Track new, persistent, resolved, and regressed findings with tested migrations.
-
 ### FUT-007: Checkpoint and resume support
 
 Add resumable multi-repository audits with deterministic checkpoints, bounded retry behavior, and protection against resuming with a different policy or repository set.
@@ -56,6 +52,10 @@ Generate a sanitized release evidence bundle containing the gate-manifest versio
 ### FUT-018: Credential capability preflight and token templates
 
 Map enabled checks to required fine-grained token permissions before an audit, report missing capabilities without exposing credentials, and generate no-secret token template links for each declared resource owner.
+
+### FUT-019: Audit-history integrity verification and recovery planning
+
+Add a read-only history verifier for database integrity, migration metadata, finding-state invariants, and backup readability. Require an explicit immutable plan before any recovery operation can replace local history.
 
 ## Tier 3: Strategic
 

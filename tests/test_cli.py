@@ -11,6 +11,7 @@ from github_account_maintainer.cli import app
 from github_account_maintainer.config import AppConfig
 from github_account_maintainer.constants import GITHUB_API_VERSION
 from github_account_maintainer.credentials import CredentialResolutionError
+from github_account_maintainer.history import AuditHistoryReport, HistoryError, HistoryWriteResult
 from github_account_maintainer.models import (
     AuthReport,
     CoverageRecord,
@@ -42,6 +43,7 @@ def test_init_creates_strict_local_config(tmp_path: Path) -> None:
     assert content["account"]["login"] == "mickpletcher"
     assert content["safety"]["automatic_write_operations"] == []
     assert content["safety"]["destructive_operations"] == "prohibited"
+    assert content["history"]["enabled"] is True
     assert not list(output.parent.glob("*.tmp"))
 
 
@@ -79,7 +81,10 @@ def test_audit_command_outputs_report_and_honors_findings_exit_code(
 
     monkeypatch.setattr(cli_module, "run_account_audit", return_report)
 
-    result = runner.invoke(app, ["audit", "--config", str(config_path), "--format", "markdown"])
+    result = runner.invoke(
+        app,
+        ["audit", "--config", str(config_path), "--format", "markdown", "--no-history"],
+    )
 
     assert result.exit_code == 1
     assert "# GitHub Account Audit" in result.stdout
@@ -94,10 +99,79 @@ def test_audit_partial_report_exits_two(tmp_path: Path, monkeypatch: pytest.Monk
 
     monkeypatch.setattr(cli_module, "run_account_audit", return_report)
 
-    result = runner.invoke(app, ["audit", "--config", str(config_path)])
+    result = runner.invoke(app, ["audit", "--config", str(config_path), "--no-history"])
 
     assert result.exit_code == 2
     assert '"status": "partial"' in result.stdout
+
+
+def test_audit_records_sanitized_history_by_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    config_path = create_config(tmp_path)
+    report = account_audit_report(RunStatus.COMPLETE, threshold_met=False)
+    recorded: list[AccountAuditReport] = []
+
+    def run_audit(_config: AppConfig) -> AccountAuditReport:
+        return report
+
+    monkeypatch.setattr(cli_module, "run_account_audit", run_audit)
+
+    def record(_config: AppConfig, audit_report: AccountAuditReport) -> HistoryWriteResult:
+        recorded.append(audit_report)
+        return HistoryWriteResult(
+            run_id="a" * 64,
+            recorded=True,
+            schema_version=2,
+            new=0,
+            persistent=0,
+            resolved=0,
+            regressed=0,
+        )
+
+    monkeypatch.setattr(cli_module, "record_audit_history", record)
+
+    result = runner.invoke(app, ["audit", "--config", str(config_path)])
+
+    assert result.exit_code == 0
+    assert recorded == [report]
+
+
+def test_audit_history_failure_preserves_report_and_exits_two(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    config_path = create_config(tmp_path)
+    report = account_audit_report(RunStatus.COMPLETE, threshold_met=False)
+
+    def run_audit(_config: AppConfig) -> AccountAuditReport:
+        return report
+
+    def fail_history(_config: AppConfig, _report: AccountAuditReport) -> HistoryWriteResult:
+        raise HistoryError("Audit history operation failed: OSError")
+
+    monkeypatch.setattr(cli_module, "run_account_audit", run_audit)
+    monkeypatch.setattr(cli_module, "record_audit_history", fail_history)
+
+    result = runner.invoke(app, ["audit", "--config", str(config_path)])
+
+    assert result.exit_code == 2
+    assert '"status": "complete"' in result.stdout
+    assert "Audit history operation failed: OSError" in result.stderr
+
+
+def test_history_command_outputs_sanitized_summary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    config_path = create_config(tmp_path)
+    report = AuditHistoryReport(schema_version=2, total_run_count=0, returned_run_count=0)
+
+    def read_history(_config: AppConfig, *, limit: int) -> AuditHistoryReport:
+        return report
+
+    monkeypatch.setattr(cli_module, "read_audit_history", read_history)
+
+    result = runner.invoke(
+        app,
+        ["history", "--config", str(config_path), "--format", "markdown", "--limit", "5"],
+    )
+
+    assert result.exit_code == 0
+    assert "# Sanitized Audit History" in result.stdout
+    assert "Stored runs: `0`" in result.stdout
 
 
 def test_auth_check_outputs_json(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -12,6 +12,15 @@ This file is the permanent record of upgrades completed from `future-upgrades.md
 
 ## Completed
 
+### FUT-006: Local audit history and finding transitions
+
+- Former tier: Tier 2, High value
+- Completed: 2026-08-11
+- Pull request or commit: [PR #16](https://github.com/mickpletcher/github-account-maintainer/pull/16)
+- Delivered: Added default sanitized local audit-history recording in a versioned SQLite database outside Git worktrees; configured-account binding and GitHub-host-and-account hashed identity; deterministic idempotent semantic run and finding identities; chronological run enforcement; new, persistent, resolved, and regressed transitions; coverage-aware protection against false resolution after partial, narrowed-scope, or inconclusive audits; count-only JSON and Markdown `history` reports; a per-run `--no-history` option and persistent `history.enabled` setting; fail-closed handling for unsafe paths including broken symbolic links, irregular files, integrity failures, duplicate findings, and newer schemas; and report-preserving exit code `2` behavior for persistence failures.
+- Verification: Synthetic tests cover all four transitions, partial-run and narrowed-scope resolution protection, idempotency, sanitized storage, empty reads, account and GitHub-host isolation, report/account mismatch rejection, chronological enforcement, Git-worktree and broken-symbolic-link path rejection, transactional v1-to-v2 migration, pre-migration backup readability, rollback on migration failure, newer-schema rejection, and audit-report preservation after a history write failure. Ruff, formatting, strict Pyright, 154 pytest tests with 93.27% coverage, lock validation, ledger uniqueness, and prompt/README/assessment synchronization pass.
+- Replacement idea: FUT-019 audit-history integrity verification and recovery planning was added to Tier 2.
+
 ### FUT-005: Settings and security coverage audit
 
 - Former tier: Tier 2, High value

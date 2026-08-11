@@ -1,12 +1,12 @@
 # GitHub Account Maintainer Assessment
 
-**Last reviewed:** 2026-08-10  
+**Last reviewed:** 2026-08-11
 **Current release:** `0.1.0.dev0`  
-**Overall status:** The read-only account audit implements 26 metadata, community, repository-settings, and security checks. The expanded Release 0.1 private pilot passed two matching GET-only runs across 73 repositories with complete declared coverage and zero writes. FUT-005 is implemented and live-verified.
+**Overall status:** The read-only account audit implements 26 metadata, community, repository-settings, and security checks. FUT-006 adds sanitized versioned SQLite history with new, persistent, resolved, and regressed finding transitions. The expanded Release 0.1 private pilot passed two matching GET-only runs across 73 repositories with complete declared coverage and zero GitHub writes.
 
 ## Quick overview
 
-GitHub Account Maintainer is a local-first Python CLI and library for auditing GitHub account resources against an explicit policy. It verifies separate discovery and audit credentials, inventories repositories, applies declared scope, validates ephemeral metadata evidence, classifies seven repository dimensions with confidence and stable hashes, binds repository class and project type into strict layered policy, and evaluates metadata, community-file presence, default-branch controls, Actions permissions, and supported security features. Account reports preserve exact terminal coverage, threshold evaluation, and privacy-safe findings while redacting non-public repository identities by default.
+GitHub Account Maintainer is a local-first Python CLI and library for auditing GitHub account resources against an explicit policy. It verifies separate discovery and audit credentials, inventories repositories, applies declared scope, validates ephemeral metadata evidence, classifies seven repository dimensions with confidence and stable hashes, binds repository class and project type into strict layered policy, and evaluates metadata, community-file presence, default-branch controls, Actions permissions, and supported security features. Account reports preserve exact terminal coverage, threshold evaluation, and privacy-safe findings while redacting non-public repository identities by default. The CLI records sanitized run and transition history outside the repository by default.
 
 Release 0.1 has a versioned ten-criterion evidence manifest, a paginated public/private synthetic account contract, and a repeated live-pilot verifier. The verifier runs detailed audits only in memory and emits a count-only summary. The expanded 2026-08-10 private pilot completed two matching audits across 73 repositories, 1,898 check results, 2,045 coverage records, and 604 findings with zero writes.
 
@@ -20,6 +20,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 | `auth check` | Implemented | Resolves the discovery credential, calls `GET /user`, and verifies the authenticated login. |
 | `inventory` | Implemented | Enumerates repositories through paginated `GET /user/repos` requests within declared affiliations and visibility. |
 | `audit` | Implemented | Runs the complete read-only account workflow and emits schema-versioned JSON or Markdown with exit codes `0`, `1`, or `2`. |
+| `history` | Implemented | Reads count-only recent run summaries and new, persistent, resolved, and regressed finding-transition counts from local SQLite state. |
 
 ## Implemented capabilities
 
@@ -51,6 +52,10 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Case-insensitive include and exclude pattern enforcement with `not_requested` coverage for repositories outside declared audit scope.
 - Configurable finding threshold with severity counts and deterministic exit codes: `0` for a clean complete run, `1` for a complete run at or above threshold, and `2` for partial coverage.
 - Minimal report mode that replaces private and internal repository names with stable numeric labels and removes their URLs.
+- Default sanitized audit-history recording with configured-account binding, per-GitHub-host and account isolation, deterministic idempotent semantic run IDs, stable finding identities, and chronological ordering.
+- New, persistent, resolved, and regressed finding transitions, with absent findings resolved only after complete audits.
+- Count-only JSON and Markdown history reports with a configurable 1 through 100 run limit and no GitHub requests.
+- Versioned SQLite schema with numbered transactional forward-only migrations, integrity checks, pre-migration backups for nonempty databases, and newer-schema rejection.
 - Structured JSON and Markdown authentication and inventory reports.
 - Stable CLI exit codes: `0` for complete below-threshold results, `1` for complete audits at or above threshold, `2` for incomplete or operational failure, and `3` for invalid configuration or input.
 - Versioned mapping from all ten Release 0.1 specification criteria to locked, test, fixture, and live-pilot evidence.
@@ -76,12 +81,17 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Private and internal repository names and URLs are redacted unless full report detail is explicitly enabled.
 - API authentication, authorization, rate-limit, server, transport, response, and partial-coverage failures fail closed.
 - The pilot does not persist detailed reports and does not emit account names, repository names or IDs, URLs, credential references, policy selectors, or finding details.
+- Audit history stores only a GitHub-host-and-login-derived hashed account key, numeric repository IDs, stable check metadata, transition counts, timestamps, and one-way state hashes. It excludes account and repository names, credential references, URLs, evidence, and raw current or desired state.
+- History paths inside a Git worktree, symbolic links, junctions, irregular database files, and irregular migration-backup directories fail closed.
+- Repository ignore rules exclude SQLite databases, journal files, write-ahead logs, shared-memory files, and migration-backup directories as defense in depth.
+- Partial audits never resolve absent findings. Complete audits resolve only findings whose repository and check received a conclusive compliant or observed result, so narrower scope and unavailable evidence cannot create false resolution or later regression. Re-recording an identical run is idempotent, and out-of-order runs are rejected.
+- A history persistence failure preserves the completed audit report on stdout, emits only a sanitized error on stderr, and forces exit code `2`.
 - Default application data paths resolve outside the source repository.
 
 ## Known limitations
 
 - Flagship and exempt maintenance tiers require explicit override support that is not implemented yet.
-- No state database, scheduling, planning, approval, remediation, rollback, browser automation, backup, or notification workflow is implemented.
+- Local audit history is implemented, but automatic retention pruning, scheduling, planning, approval, remediation, rollback, browser automation, backup, and notification workflows are not.
 - The expanded FUT-005 audit requires repository Metadata, Contents, Administration, and Code scanning alerts read access. The live credential boundary was verified with those read-only permissions. Missing permissions remain explicit `inaccessible` or `unverified` states and make the run partial.
 - Private plan restrictions are explicit `unavailable_by_plan` states. Archived repository code scanning is `not_applicable`. Neither state creates false findings or makes otherwise complete declared coverage partial.
 - Code scanning detection checks default setup first and then only the presence count of advanced or external analyses. It does not store analysis records, alert details, paths, refs, or tool names.
@@ -91,7 +101,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Ruff lint passes.
 - Ruff formatting checks pass.
 - Strict Pyright checks pass with no errors.
-- Pytest passes 135 tests with 92.98% total coverage.
+- Pytest passes 154 tests with 93.27% total coverage.
 - The lockfile is reproducible with `uv lock --check`.
 - GitHub Actions uses read-only permissions, pinned action SHAs, non-persistent checkout credentials, stale-run cancellation, and a job timeout.
 - CodeQL scans Python and GitHub Actions sources.
@@ -104,9 +114,9 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 
 ## Next priorities
 
-1. Implement FUT-006 local audit history and finding transitions.
-2. Implement FUT-018 credential capability preflight and token templates.
-3. Add explicit classification overrides and classification-drift diagnostics through FUT-015.
+1. Implement FUT-018 credential capability preflight and token templates.
+2. Add explicit classification overrides and classification-drift diagnostics through FUT-015.
+3. Implement FUT-019 audit-history integrity verification and recovery planning.
 
 ## Required maintenance
 
@@ -114,4 +124,4 @@ Every repository change must update this file and `changelog.md` in the same com
 
 When an upgrade is implemented, move its stable ID from `future-upgrades.md` to `completed-upgrades.md`, record the delivery and verification evidence, and add at least one new upgrade idea to the future backlog in the same pull request.
 
-**Latest assessment change:** Recorded the successful expanded FUT-005 live pilot, plan-aware private and archived repository coverage, 135-test verification, status-only Dependabot handling, verified disabled code-scanning drift, unknown inaccessible branch evidence, and the completed read-only credential boundary.
+**Latest assessment change:** Recorded FUT-006 sanitized local SQLite history, coverage-aware transition semantics, host/account isolation, migration and path safeguards, the `history` command, and 154-test verification at 93.27% coverage.

@@ -117,6 +117,10 @@ class AuditConfig(StrictModel):
     failure_threshold: Literal["informational", "low", "medium", "high", "critical"] = "low"
 
 
+class HistoryConfig(StrictModel):
+    enabled: bool = True
+
+
 class PinConfig(StrictModel):
     mode: Literal["top_stars"] = "top_stars"
     count: Annotated[int, Field(ge=1, le=6)] = 6
@@ -361,6 +365,7 @@ class AppConfig(StrictModel):
     local_data: LocalDataConfig
     safety: SafetyConfig = SafetyConfig()
     audit: AuditConfig = AuditConfig()
+    history: HistoryConfig = HistoryConfig()
     repositories: RepositoryConfig = RepositoryConfig()
     pins: PinConfig = PinConfig()
     readme: ReadmeConfig = ReadmeConfig()

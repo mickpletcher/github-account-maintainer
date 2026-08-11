@@ -718,7 +718,8 @@ GitHub REST requests pin `X-GitHub-Api-Version: 2026-03-10`. The pinned version 
 github-account-maintainer init [--output PATH]
 github-account-maintainer auth check
 github-account-maintainer inventory
-github-account-maintainer audit [--repo OWNER/REPO] [--deep]
+github-account-maintainer audit [--repo OWNER/REPO] [--deep] [--no-history]
+github-account-maintainer history [--limit 1..100] [--format json|markdown]
 github-account-maintainer plan [--repo OWNER/REPO]
 github-account-maintainer plans show PLAN_ID
 github-account-maintainer apply-safe PLAN_ID --apply
@@ -784,6 +785,9 @@ local_data:
   report_detail: minimal
   state_retention_days: 365
   report_retention_days: 90
+
+history:
+  enabled: true
 
 safety:
   require_explicit_apply: true
@@ -860,6 +864,12 @@ The final schema rejects unknown fields and incompatible combinations. Hard safe
 
 ## 33. State and Audit History
 
+The implemented FUT-006 baseline records sanitized account audit runs and finding transitions in `%LOCALAPPDATA%\GitHubAccountMaintainer\state\audit-history.sqlite3` on Windows or the corresponding `platformdirs` state path. Automatic recording is enabled by default, can be disabled in configuration, and can be skipped for one audit with `--no-history`. The read-only `history` command returns recent run and transition counts without contacting GitHub or exposing local paths.
+
+An enabled history-persistence failure does not discard the completed audit report. The CLI emits the full selected report format to stdout, emits a sanitized history error to stderr, and exits `2` because the requested operation was incomplete.
+
+The baseline binds each report to the configured account and stores an identity hashed from normalized GitHub host and login, numeric repository IDs, stable check metadata, one-way state hashes, timestamps, run counts, and `new`, `persistent`, `resolved`, or `regressed` transition events. It does not store account or repository names, credential references, URLs, finding evidence, or raw current and desired values. Only a complete audit with a conclusive compliant or observed result for the same repository and check can resolve a previously active finding. Partial, narrowed-scope, absent-inventory, inaccessible, unsupported, unavailable-by-plan, unverified, failed, and skipped evidence cannot be treated as resolution. Semantically identical runs are idempotent, and mismatched-account or out-of-order runs fail closed.
+
 The state database records:
 
 - Discovered accounts and repositories.
@@ -875,7 +885,7 @@ The state database records:
 - Backup manifests and verification results.
 - Notification cooldowns.
 
-Secrets, credential-store payloads, browser cookies, raw private repository content, raw AI prompts or responses containing repository content, and backup encryption keys are not stored in the state database. Repository identifiers and evidence stored in minimal mode use stable IDs and redacted display values where full names are unnecessary. Database schema changes use numbered, transactional, forward-only migrations and are covered by migration tests. A pre-migration backup is created outside the source repository before any nonempty database is upgraded.
+Secrets, credential-store payloads, browser cookies, raw private repository content, raw AI prompts or responses containing repository content, and backup encryption keys are not stored in the state database. Repository identifiers and evidence stored in minimal mode use stable IDs and redacted display values where full names are unnecessary. Database schema changes use numbered, transactional, forward-only migrations and are covered by migration tests. A pre-migration backup is created outside the source repository before any nonempty database is upgraded. State paths inside Git worktrees, symbolic links, junctions, irregular database files, corrupt databases, failed migrations, and schemas newer than the application fail closed.
 
 ## 34. Reliability Requirements
 
@@ -1017,7 +1027,7 @@ Release 1.0 is ready for scheduled production use when Windows Task Scheduler an
 
 - Read-only settings and supported security-feature checks.
 - Deterministic README evidence and social-preview validation.
-- SQLite migrations, run history, finding transitions, and checkpoint resume.
+- SQLite migrations, run history, and finding transitions implemented by FUT-006; checkpoint resume remains pending.
 - Explicit unsupported and manual-review coverage for unavailable account data.
 
 ### Phase 2: Release 0.3 planned remediation and pull requests
