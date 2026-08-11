@@ -52,7 +52,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Case-insensitive include and exclude pattern enforcement with `not_requested` coverage for repositories outside declared audit scope.
 - Configurable finding threshold with severity counts and deterministic exit codes: `0` for a clean complete run, `1` for a complete run at or above threshold, and `2` for partial coverage.
 - Minimal report mode that replaces private and internal repository names with stable numeric labels and removes their URLs.
-- Default sanitized audit-history recording with configured-account binding, per-account isolation, deterministic idempotent semantic run IDs, stable finding identities, and chronological ordering.
+- Default sanitized audit-history recording with configured-account binding, per-GitHub-host and account isolation, deterministic idempotent semantic run IDs, stable finding identities, and chronological ordering.
 - New, persistent, resolved, and regressed finding transitions, with absent findings resolved only after complete audits.
 - Count-only JSON and Markdown history reports with a configurable 1 through 100 run limit and no GitHub requests.
 - Versioned SQLite schema with numbered transactional forward-only migrations, integrity checks, pre-migration backups for nonempty databases, and newer-schema rejection.
@@ -81,10 +81,10 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Private and internal repository names and URLs are redacted unless full report detail is explicitly enabled.
 - API authentication, authorization, rate-limit, server, transport, response, and partial-coverage failures fail closed.
 - The pilot does not persist detailed reports and does not emit account names, repository names or IDs, URLs, credential references, policy selectors, or finding details.
-- Audit history stores only a hashed account key, numeric repository IDs, stable check metadata, transition counts, timestamps, and one-way state hashes. It excludes account and repository names, credential references, URLs, evidence, and raw current or desired state.
+- Audit history stores only a GitHub-host-and-login-derived hashed account key, numeric repository IDs, stable check metadata, transition counts, timestamps, and one-way state hashes. It excludes account and repository names, credential references, URLs, evidence, and raw current or desired state.
 - History paths inside a Git worktree, symbolic links, junctions, irregular database files, and irregular migration-backup directories fail closed.
 - Repository ignore rules exclude SQLite databases, journal files, write-ahead logs, shared-memory files, and migration-backup directories as defense in depth.
-- Partial audits never resolve absent findings. Re-recording an identical run is idempotent, and out-of-order runs are rejected.
+- Partial audits never resolve absent findings. Complete audits resolve only findings whose repository and check received a conclusive compliant or observed result, so narrower scope and unavailable evidence cannot create false resolution or later regression. Re-recording an identical run is idempotent, and out-of-order runs are rejected.
 - A history persistence failure preserves the completed audit report on stdout, emits only a sanitized error on stderr, and forces exit code `2`.
 - Default application data paths resolve outside the source repository.
 
@@ -101,7 +101,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Ruff lint passes.
 - Ruff formatting checks pass.
 - Strict Pyright checks pass with no errors.
-- Pytest passes 151 tests with 93.21% total coverage.
+- Pytest passes 154 tests with 93.27% total coverage.
 - The lockfile is reproducible with `uv lock --check`.
 - GitHub Actions uses read-only permissions, pinned action SHAs, non-persistent checkout credentials, stale-run cancellation, and a job timeout.
 - CodeQL scans Python and GitHub Actions sources.
@@ -124,4 +124,4 @@ Every repository change must update this file and `changelog.md` in the same com
 
 When an upgrade is implemented, move its stable ID from `future-upgrades.md` to `completed-upgrades.md`, record the delivery and verification evidence, and add at least one new upgrade idea to the future backlog in the same pull request.
 
-**Latest assessment change:** Recorded FUT-006 sanitized local SQLite history, transition semantics, migration and path safeguards, the `history` command, and 151-test verification at 93.21% coverage.
+**Latest assessment change:** Recorded FUT-006 sanitized local SQLite history, coverage-aware transition semantics, host/account isolation, migration and path safeguards, the `history` command, and 154-test verification at 93.27% coverage.

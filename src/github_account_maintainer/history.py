@@ -12,7 +12,7 @@ from pydantic import Field
 
 from github_account_maintainer.account_audit import AccountAuditReport
 from github_account_maintainer.config import AppConfig, StrictModel
-from github_account_maintainer.models import Finding, RunStatus
+from github_account_maintainer.models import CheckOutcome, Finding, RunStatus
 
 CURRENT_SCHEMA_VERSION: Final = 2
 DATABASE_FILENAME: Final = "audit-history.sqlite3"
@@ -164,7 +164,7 @@ def record_audit_history(config: AppConfig, report: AccountAuditReport) -> Histo
     _validate_report_timestamps(report)
     if report.account_display.casefold() != config.account.login.casefold():
         raise HistoryError("Audit report account did not match the configured account")
-    account_key = _digest(config.account.login.casefold())
+    account_key = _account_key(config)
     findings = _normalized_findings(report.findings)
     run_id = _run_id(account_key, report, findings)
 
@@ -189,7 +189,7 @@ def read_audit_history(config: AppConfig, *, limit: int = 20) -> AuditHistoryRep
     if database_path.is_symlink() or not database_path.is_file():
         raise HistoryError("Audit history database is not a regular file")
 
-    account_key = _digest(config.account.login.casefold())
+    account_key = _account_key(config)
     try:
         connection = _open_database(database_path, create=False)
         try:
@@ -308,6 +308,11 @@ def _record_run(
     completed_at = report.completed_at.isoformat()
     recorded_at = _utc_now()
     counts = {transition: 0 for transition in FindingTransition}
+    conclusively_evaluated = {
+        (result.repository_id, result.check_id)
+        for result in report.results
+        if result.outcome in {CheckOutcome.COMPLIANT, CheckOutcome.OBSERVED}
+    }
 
     try:
         connection.execute("BEGIN IMMEDIATE")
@@ -406,6 +411,8 @@ def _record_run(
         if report.status is RunStatus.COMPLETE:
             for finding_key, prior in previous.items():
                 if finding_key in findings or int(prior["active"]) == 0:
+                    continue
+                if (prior["repository_id"], prior["check_id"]) not in conclusively_evaluated:
                     continue
                 transition = FindingTransition.RESOLVED
                 counts[transition] += 1
@@ -569,6 +576,17 @@ def _finding_state_hash(finding: Finding) -> str:
     )
 
 
+def _account_key(config: AppConfig) -> str:
+    return _digest(
+        _canonical_json(
+            {
+                "github_host": config.account.github_host.casefold(),
+                "login": config.account.login.casefold(),
+            }
+        )
+    )
+
+
 def _run_id(account_key: str, report: AccountAuditReport, findings: dict[str, Finding]) -> str:
     return _digest(
         _canonical_json(
@@ -621,10 +639,7 @@ def _inside_git_worktree(path: Path) -> bool:
 
 
 def _contains_link_or_junction(path: Path) -> bool:
-    return any(
-        candidate.exists() and (candidate.is_symlink() or candidate.is_junction())
-        for candidate in (path, *path.parents)
-    )
+    return any(candidate.is_symlink() or candidate.is_junction() for candidate in (path, *path.parents))
 
 
 def _canonical_json(value: object) -> str:

@@ -15,7 +15,16 @@ from github_account_maintainer.history import (
     read_audit_history,
     record_audit_history,
 )
-from github_account_maintainer.models import Finding, RemediationClass, RunStatus, Severity
+from github_account_maintainer.models import (
+    CheckOutcome,
+    CheckResult,
+    CoverageRecord,
+    CoverageState,
+    Finding,
+    RemediationClass,
+    RunStatus,
+    Severity,
+)
 
 
 def test_records_new_persistent_resolved_and_regressed_transitions(tmp_path: Path) -> None:
@@ -139,6 +148,34 @@ def test_complete_run_resolves_but_partial_run_does_not(tmp_path: Path) -> None:
     assert complete.resolved == 1
 
 
+def test_complete_run_does_not_resolve_findings_outside_current_coverage(tmp_path: Path) -> None:
+    config = history_config(tmp_path)
+    timestamp = datetime(2026, 8, 11, 12, tzinfo=UTC)
+    finding = sample_finding(timestamp)
+    record_audit_history(config, report_at(timestamp, RunStatus.COMPLETE, (finding,)))
+    narrowed_report = report_at(timestamp + timedelta(minutes=1), RunStatus.COMPLETE, ()).model_copy(
+        update={
+            "results": (),
+            "coverage": (
+                CoverageRecord(
+                    repository_id=finding.repository_id,
+                    check_id=finding.check_id,
+                    state=CoverageState.NOT_REQUESTED,
+                ),
+            ),
+        }
+    )
+
+    narrowed = record_audit_history(config, narrowed_report)
+    resolved = record_audit_history(
+        config,
+        report_at(timestamp + timedelta(minutes=2), RunStatus.COMPLETE, ()),
+    )
+
+    assert narrowed.resolved == 0
+    assert resolved.resolved == 1
+
+
 def test_migrates_v1_transactionally_and_creates_backup(tmp_path: Path) -> None:
     config = history_config(tmp_path)
     database_path = history_database_path(config)
@@ -258,6 +295,35 @@ def test_rejects_state_directory_inside_git_worktree(tmp_path: Path) -> None:
         history_database_path(config)
 
 
+def test_rejects_broken_symbolic_link_in_state_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    link = tmp_path / "broken-link"
+    original_is_symlink = Path.is_symlink
+
+    def fake_is_symlink(path: Path) -> bool:
+        return path == link or original_is_symlink(path)
+
+    monkeypatch.setattr(Path, "is_symlink", fake_is_symlink)
+    config = history_config(link / "state")
+
+    with pytest.raises(HistoryError, match="symbolic links"):
+        history_database_path(config)
+
+
+def test_history_isolates_same_login_on_different_github_hosts(tmp_path: Path) -> None:
+    github_config = history_config(tmp_path)
+    enterprise_config = github_config.model_copy(
+        update={"account": github_config.account.model_copy(update={"github_host": "github.example.com"})}
+    )
+    timestamp = datetime(2026, 8, 11, 12, tzinfo=UTC)
+    report = report_at(timestamp, RunStatus.COMPLETE, ())
+
+    record_audit_history(github_config, report)
+    record_audit_history(enterprise_config, report)
+
+    assert read_audit_history(github_config).total_run_count == 1
+    assert read_audit_history(enterprise_config).total_run_count == 1
+
+
 def history_config(state_directory: Path) -> AppConfig:
     config = default_config("mickpletcher")
     local_data = config.local_data.model_copy(update={"state_directory": state_directory})
@@ -272,6 +338,7 @@ def report_at(
     counts = {severity: 0 for severity in Severity}
     for finding in findings:
         counts[finding.severity] += 1
+    outcome = CheckOutcome.NONCOMPLIANT if findings else CheckOutcome.COMPLIANT
     return AccountAuditReport(
         tool_version="0.1.0.dev0",
         github_api_version=GITHUB_API_VERSION,
@@ -285,6 +352,18 @@ def report_at(
         repository_count=1,
         requested_repository_count=1,
         audited_repository_count=0,
+        results=(
+            CheckResult(
+                repository_id=987654321,
+                repository_display="nonpublic-repository:987654321",
+                check_id="metadata.description",
+                category="metadata",
+                outcome=outcome,
+                coverage_state=CoverageState.AUDITED,
+                current_state={"present": not findings},
+                desired_state={"requirement": "required"},
+            ),
+        ),
         findings=findings,
         finding_summary=FindingSummary(
             threshold=Severity.LOW,

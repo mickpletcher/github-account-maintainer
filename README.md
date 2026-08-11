@@ -121,7 +121,7 @@ The project uses these boundaries:
 - Private and internal repository names and URLs are redacted in `minimal` detail mode.
 - Repository checks report presence and counts. They do not store descriptions, homepage URLs, topic names, language names, file paths, or file content.
 - Classification evidence treats raw topics and language names as ephemeral input. Serialized evidence and binding reports exclude those values and the internal repository API name.
-- Audit history stores a hashed account key, numeric repository IDs, stable check metadata, transition counts, timestamps, and one-way state hashes. It does not store account names, repository names, credentials, URLs, evidence, or raw current and desired values.
+- Audit history stores a key hashed from GitHub host and account login, numeric repository IDs, stable check metadata, transition counts, timestamps, and one-way state hashes. It does not store account names, repository names, credentials, URLs, evidence, or raw current and desired values.
 - SQLite migrations are numbered, transactional, and forward-only. A local backup is created before a nonempty database is upgraded.
 - Default configuration, state, cache, report, log, browser, and backup-metadata paths are outside the cloned repository.
 
@@ -461,10 +461,10 @@ The history report contains run timestamps, complete or partial status, reposito
 
 - `new`: The finding identity has not been seen before.
 - `persistent`: The finding was active in local history and appeared again.
-- `resolved`: A complete audit no longer contains a previously active finding.
+- `resolved`: A complete audit conclusively evaluates the same repository and check without the previously active finding.
 - `regressed`: A resolved finding appeared again.
 
-A partial audit never resolves an absent finding. Missing evidence is not proof that a problem was fixed. The history command returns only sanitized counts and run metadata. It does not return finding evidence, current or desired values, repository names, credential references, URLs, or local file paths.
+A partial audit never resolves an absent finding. A complete audit also preserves findings for repositories or checks that are excluded, absent from inventory, inaccessible, unsupported, unavailable by plan, unverified, failed, or skipped by policy. Missing evidence is not proof that a problem was fixed. The history command returns only sanitized counts and run metadata. It does not return finding evidence, current or desired values, repository names, credential references, URLs, or local file paths.
 
 Runs must match the configured account and be recorded in chronological order. Re-recording the same semantic audit is idempotent and does not duplicate events. The tool rejects a database created by a newer schema. When an older nonempty database needs an upgrade, the tool checks database integrity, creates a timestamped backup under the local state directory, and applies each numbered migration in its own transaction.
 
