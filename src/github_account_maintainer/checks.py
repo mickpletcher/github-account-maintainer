@@ -439,6 +439,10 @@ def _evaluate_settings_and_security(
     results: list[CheckResult] = []
     findings: list[Finding] = []
     default_branch = cast(str | None, repository_state.get("default_branch"))
+    visibility = cast(str, repository_state["visibility"])
+    archived = cast(bool, repository_state["archived"])
+    plan_limited = visibility == "private" and not isinstance(repository_state.get("security_and_analysis"), dict)
+    branch_forbidden = CoverageState.UNAVAILABLE_BY_PLAN if plan_limited else CoverageState.INACCESSIBLE
 
     branch_values: dict[str, tuple[bool | None, CoverageState, JsonValue]] = {}
     if default_branch is None:
@@ -451,12 +455,14 @@ def _evaluate_settings_and_security(
             f"/repos/{target.api_name}/rules/branches/{encoded_branch}",
             permissions,
             not_found=CoverageState.UNSUPPORTED,
+            forbidden=branch_forbidden,
         )
         protection, protection_state, classic_protected = _get_branch_protection(
             client,
             target,
             encoded_branch,
             permissions,
+            forbidden=branch_forbidden,
         )
         rule_types: set[str] = _rule_types(rules) if rules is not None else set()
         active_rules = len(rules) if rules is not None else None
@@ -657,7 +663,11 @@ def _evaluate_settings_and_security(
         ("security.push_protection", policy.audit_push_protection, "secret_scanning_push_protection", Severity.HIGH),
     )
     for check_id, enabled_by_policy, key, severity in security_mapping:
-        value, state = _metadata_security_feature(repository_state, key)
+        value, state = _metadata_security_feature(
+            repository_state,
+            key,
+            missing=CoverageState.UNAVAILABLE_BY_PLAN if plan_limited else CoverageState.UNVERIFIED,
+        )
         result, finding = _feature_result(
             target,
             check_id,
@@ -677,7 +687,14 @@ def _evaluate_settings_and_security(
         if finding is not None:
             findings.append(finding)
 
-    code_value, code_state, code_current = _code_scanning_state(client, target, repository_state, permissions)
+    code_value, code_state, code_current = _code_scanning_state(
+        client,
+        target,
+        repository_state,
+        permissions,
+        archived=archived,
+        plan_limited=plan_limited,
+    )
     result, finding = _feature_result(
         target,
         "security.code_scanning",
@@ -697,7 +714,6 @@ def _evaluate_settings_and_security(
     if finding is not None:
         findings.append(finding)
 
-    visibility = cast(str, repository_state["visibility"])
     if visibility != "public":
         private_reporting = None
         private_reporting_state = CoverageState.NOT_APPLICABLE
@@ -743,6 +759,7 @@ def _get_object(
     *,
     not_found: CoverageState,
     unprocessable: CoverageState = CoverageState.FAILED,
+    forbidden: CoverageState = CoverageState.INACCESSIBLE,
 ) -> tuple[JsonObject | None, CoverageState]:
     try:
         response = client.get(path)
@@ -756,7 +773,7 @@ def _get_object(
         if error.status_code == 422:
             return None, unprocessable
         if error.kind == "authorization":
-            return None, CoverageState.INACCESSIBLE
+            return None, forbidden
         return None, CoverageState.FAILED
     except (GitHubTransportError, TypeError, ValueError):
         return None, CoverageState.FAILED
@@ -768,6 +785,7 @@ def _get_array(
     permissions: set[str],
     *,
     not_found: CoverageState,
+    forbidden: CoverageState = CoverageState.INACCESSIBLE,
 ) -> tuple[list[JsonObject] | None, CoverageState]:
     try:
         response = client.get(path)
@@ -782,7 +800,7 @@ def _get_array(
         if error.status_code == 404:
             return None, not_found
         if error.kind == "authorization":
-            return None, CoverageState.INACCESSIBLE
+            return None, forbidden
         return None, CoverageState.FAILED
     except (GitHubTransportError, TypeError, ValueError):
         return None, CoverageState.FAILED
@@ -793,6 +811,8 @@ def _get_branch_protection(
     target: RepositoryAuditTarget,
     encoded_branch: str,
     permissions: set[str],
+    *,
+    forbidden: CoverageState = CoverageState.INACCESSIBLE,
 ) -> tuple[JsonObject | None, CoverageState, bool | None]:
     try:
         response = client.get(f"/repos/{target.api_name}/branches/{encoded_branch}/protection")
@@ -804,7 +824,7 @@ def _get_branch_protection(
         if error.status_code == 404:
             return None, CoverageState.SUPPORTED, False
         if error.kind == "authorization":
-            return None, CoverageState.INACCESSIBLE, None
+            return None, forbidden, None
         return None, CoverageState.FAILED, None
     except (GitHubTransportError, TypeError, ValueError):
         return None, CoverageState.FAILED, None
@@ -941,13 +961,18 @@ def _workflow_policy(
     return current, default_permissions == "read" and not can_approve, CoverageState.SUPPORTED
 
 
-def _metadata_security_feature(payload: JsonObject, key: str) -> tuple[bool | None, CoverageState]:
+def _metadata_security_feature(
+    payload: JsonObject,
+    key: str,
+    *,
+    missing: CoverageState = CoverageState.UNVERIFIED,
+) -> tuple[bool | None, CoverageState]:
     security = payload.get("security_and_analysis")
     if not isinstance(security, dict):
-        return None, CoverageState.UNVERIFIED
+        return None, missing
     feature = cast(JsonObject, security).get(key)
     if not isinstance(feature, dict):
-        return None, CoverageState.UNVERIFIED
+        return None, missing
     status = cast(JsonObject, feature).get("status")
     if status == "enabled":
         return True, CoverageState.SUPPORTED
@@ -963,12 +988,19 @@ def _code_scanning_state(
     target: RepositoryAuditTarget,
     repository_state: JsonObject,
     permissions: set[str],
+    *,
+    archived: bool,
+    plan_limited: bool,
 ) -> tuple[bool | None, CoverageState, JsonValue]:
+    if archived:
+        return None, CoverageState.NOT_APPLICABLE, {"configured": None, "mode": None}
+    unavailable = CoverageState.UNAVAILABLE_BY_PLAN if plan_limited else CoverageState.INACCESSIBLE
     default_setup, default_state = _get_object(
         client,
         f"/repos/{target.api_name}/code-scanning/default-setup",
         permissions,
         not_found=CoverageState.SUPPORTED,
+        forbidden=unavailable,
     )
     if default_setup is not None:
         state = default_setup.get("state")
@@ -976,12 +1008,15 @@ def _code_scanning_state(
             return True, CoverageState.SUPPORTED, {"configured": True, "mode": "default"}
         if state not in {"not-configured", None}:
             return None, CoverageState.UNVERIFIED, {"configured": None, "mode": None}
+    elif default_state is CoverageState.UNAVAILABLE_BY_PLAN:
+        return None, default_state, {"configured": None, "mode": None}
 
     analyses, analyses_state = _get_array(
         client,
         f"/repos/{target.api_name}/code-scanning/analyses?per_page=1",
         permissions,
         not_found=CoverageState.SUPPORTED,
+        forbidden=unavailable,
     )
     if analyses is not None:
         configured = bool(analyses)

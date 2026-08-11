@@ -78,17 +78,17 @@ Keep the configuration and any separately generated audit reports outside the re
 
 ## Latest count-only evidence
 
-The private pilot passed on 2026-08-10 before FUT-005 was added:
+The expanded private pilot passed on 2026-08-10 after FUT-005 was added:
 
 - two repeated runs;
 - 73 repositories discovered, requested, and audited;
-- 1,022 check results and 1,169 coverage records;
-- 122 findings;
+- 1,898 check results and 2,045 coverage records;
+- 669 findings;
 - matching semantic results;
 - minimal detail and GET-only mode enforced;
 - zero automatic write operations.
 
-This evidence contains no account name, repository identity, URL, credential reference, policy selector, or finding detail. Rerun the pilot after material audit changes before treating the newer check set as release evidence.
+This evidence contains no account name, repository identity, URL, credential reference, policy selector, or finding detail. It covers all 26 implemented checks, including explicit unavailable-by-plan handling for private plan restrictions and not-applicable handling for archived code scanning.
 
 ## Gate evidence
 

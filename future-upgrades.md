@@ -19,7 +19,7 @@ Priority can change as the project develops. Moving an unimplemented item betwee
 
 These upgrades directly unblock the read-only Release 0.1 gate.
 
-No pending upgrades. The private live pilot is a release operation documented in `RELEASE-0.1-PILOT.md`, not a repository implementation backlog item.
+No pending upgrades. The expanded private live pilot passed and remains documented in `RELEASE-0.1-PILOT.md`; future Release 0.1 reruns are release operations, not repository implementation backlog items.
 
 ## Tier 2: High value
 

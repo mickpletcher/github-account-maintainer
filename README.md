@@ -44,7 +44,7 @@ The package version is `0.1.0.dev0`. Release 0.1 is still under development.
 | Resolve layered policy | Implemented | The account audit resolves and hashes policy separately for each in-scope repository. |
 | Audit repository policy | Implemented | The public `audit` command runs 26 deterministic metadata, community, settings, and security checks per in-scope repository. |
 | Apply GitHub changes | Not implemented | No GitHub mutation endpoint exists. |
-| Full Release 0.1 audit | Pilot passed | Two private read-only runs matched across 73 repositories with zero writes on 2026-08-10. |
+| Full Release 0.1 audit | Pilot passed | Two expanded 26-check read-only runs matched across 73 repositories with zero writes on 2026-08-10. |
 
 This status matters. A successful inventory does not mean the account passed a full security or compliance audit.
 
@@ -454,6 +454,8 @@ The pilot intentionally rejects:
 
 Findings do not fail the pilot. Findings describe repository compliance. The pilot verifies that the audit itself is complete, deterministic, private by default, and read-only.
 
+The latest 2026-08-10 pilot passed two matching runs across 73 repositories. Each run produced 1,898 check results, 2,045 coverage records, and 669 findings. The summary contained counts only, enforced minimal detail and GET-only requests, and recorded zero automatic writes.
+
 See [RELEASE-0.1-PILOT.md](RELEASE-0.1-PILOT.md) for prerequisites, Windows and Linux commands, safe output fields, exit behavior, and the evidence manifest.
 
 ## Command reference
@@ -536,7 +538,7 @@ Each result records:
 
 Required values that are confirmed missing produce findings. Optional values are observed without producing false violations. Repository or community-profile authorization and not-found responses are treated as inaccessible. A missing directory listing is treated as an absent directory only after repository access succeeds. Malformed or operational failures are unknown and failed. An active policy exception marks its check `skipped_by_policy` and does not produce a finding.
 
-Settings and security checks fail closed. Supported evidence can produce a compliant or noncompliant result. Inaccessible or unverified evidence makes the account audit partial and does not produce a false finding. A feature that does not apply to the repository visibility or branch state uses `not_applicable`. A feature that GitHub does not provide for the active plan uses `unavailable_by_plan`.
+Settings and security checks fail closed. Supported evidence can produce a compliant or noncompliant result. Inaccessible or unverified evidence makes the account audit partial and does not produce a false finding. A feature that does not apply to the repository visibility, archive state, or branch state uses `not_applicable`. A feature that GitHub does not provide for the active plan uses `unavailable_by_plan`. Private repositories without the required GitHub plan use `unavailable_by_plan` for unavailable branch controls, secret scanning, push protection, and code scanning. Archived repositories use `not_applicable` for code scanning.
 
 The implementation uses only these GET requests:
 
@@ -981,9 +983,9 @@ When a tracked upgrade is implemented:
 
 ## Release roadmap
 
-The Release 0.1 private pilot passed on 2026-08-10. It completed two matching GET-only audits across 73 repositories with zero writes. Before tagging the release:
+The expanded Release 0.1 private pilot passed on 2026-08-10. It completed two matching GET-only audits across 73 repositories, with 1,898 check results, 2,045 coverage records, 669 findings, and zero writes per run. Before tagging the release:
 
-1. Rerun the count-only pilot after material audit changes with a private minimal-detail configuration and valid read-only credentials.
+1. Rerun the count-only pilot after any further material audit change with a private minimal-detail configuration and valid read-only credentials.
 2. Retain only the count-only result and CI links as release evidence. Do not commit private audit output.
 
-No remediation work begins until the read-only Release 0.1 gate passes.
+Release 0.1 remains read-only. No remediation path is enabled.

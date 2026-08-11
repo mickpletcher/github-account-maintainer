@@ -11,7 +11,7 @@ GitHub Account Maintainer is a policy-driven automation system that audits and m
 
 The system is audit-first and fail-closed. It may automatically apply only changes explicitly classified as safe by policy. Repository content changes are proposed through pull requests. Destructive, access-related, billable, or potentially breaking changes require explicit approval and are never silently applied.
 
-The current implementation is GET-only. It runs 26 checks per in-scope repository across metadata, community files, default-branch controls, Actions permissions, and supported security features. The 2026-08-10 count-only pilot passed two matching audits across 73 repositories with zero writes. FUT-005 expanded the check set after that pilot and requires a new repeated pilot with the documented read-only permissions.
+The current implementation is GET-only. It runs 26 checks per in-scope repository across metadata, community files, default-branch controls, Actions permissions, and supported security features. The expanded 2026-08-10 count-only pilot passed two matching audits across 73 repositories with 1,898 check results, 2,045 coverage records, 669 findings, and zero writes per run. FUT-005 is complete and live-verified with the documented read-only permissions and explicit plan-aware coverage.
 
 ### Product description
 
@@ -956,7 +956,7 @@ Release 0.1 passed its local read-only pilot after it could:
 2. Run `auth check`, verify the discovery identity and read-only role, and never print or persist the token.
 3. Inventory every repository visible within declared discovery scope with proven pagination and a terminal coverage state for every requested item.
 4. Classify repositories and resolve strict policy deterministically with an explanation trace and stable policy hash.
-5. Run deterministic metadata and community-file checks without cloning private content unnecessarily.
+5. Run 26 deterministic metadata, community-file, repository-settings, and security checks without cloning private content or reading security-alert details.
 6. Produce schema-versioned JSON and Markdown reports with exact coverage, findings, current and desired values, and minimal-detail privacy defaults.
 7. Use only read-only GitHub requests. The Release 0.1 code path contains no enabled mutating adapter and the automatic-write allowlist is empty.
 8. Return the documented exit codes, including code `2` for every partial run.
@@ -967,7 +967,7 @@ Release 0.1 passed its local read-only pilot after it could:
 
 Release 0.2 is ready when it additionally:
 
-1. Audits supported repository settings, security features, README evidence, and social-preview validity.
+1. Completes the remaining README-evidence and social-preview validity audits beyond the implemented repository settings and security checks.
 2. Distinguishes supported, unsupported, unavailable-by-plan, inherited, inaccessible, not-applicable, unverified, and failed states through tested API fixtures.
 3. Stores migrated run and finding history without secrets or raw private source content.
 4. Resumes a deliberately interrupted multi-repository audit without duplicating completed work.

@@ -239,7 +239,6 @@ def test_settings_and_security_checks_preserve_explicit_terminal_states() -> Non
         if request.url.path == "/repos/example/synthetic":
             payload = cast(dict[str, object], _fixture("repository-metadata-complete.json"))
             payload.pop("security_and_analysis")
-            payload["visibility"] = "private"
             return httpx.Response(200, json=payload)
         if request.url.path.endswith("/rules/branches/main"):
             return httpx.Response(200, json=[])
@@ -257,10 +256,62 @@ def test_settings_and_security_checks_preserve_explicit_terminal_states() -> Non
     assert _result(report, "settings.rulesets").coverage_state is CoverageState.SUPPORTED
     assert _result(report, "settings.branch_protection").coverage_state is CoverageState.INACCESSIBLE
     assert _result(report, "security.secret_scanning").coverage_state is CoverageState.UNVERIFIED
-    assert _result(report, "security.private_vulnerability_reporting").coverage_state is CoverageState.NOT_APPLICABLE
+    assert _result(report, "security.private_vulnerability_reporting").coverage_state is CoverageState.INACCESSIBLE
     assert not any(
         finding.check_id in {"settings.branch_protection", "security.secret_scanning"} for finding in report.findings
     )
+
+
+def test_plan_limited_private_features_are_complete_without_false_findings() -> None:
+    plan_limited_checks = {
+        "settings.branch_protection",
+        "settings.rulesets",
+        "settings.required_reviews",
+        "settings.required_status_checks",
+        "security.secret_scanning",
+        "security.push_protection",
+        "security.code_scanning",
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path == "/repos/example/synthetic":
+            payload = cast(dict[str, object], _fixture("repository-metadata-complete.json"))
+            payload.pop("security_and_analysis")
+            payload["visibility"] = "private"
+            return httpx.Response(200, json=payload)
+        if path.endswith("/rules/branches/main"):
+            return httpx.Response(403, json={}, headers=_permission_header("metadata=read"))
+        if path.endswith("/branches/main/protection") or path.endswith("/code-scanning/default-setup"):
+            return httpx.Response(403, json={}, headers=_permission_header("administration=read"))
+        if path.endswith("/code-scanning/analyses"):
+            raise AssertionError("plan-limited code scanning must not request analyses")
+        return _response_for_complete_fixture(request)
+
+    report = _run(handler)
+
+    assert report.status is RunStatus.COMPLETE
+    assert all(
+        _result(report, check_id).coverage_state is CoverageState.UNAVAILABLE_BY_PLAN
+        for check_id in plan_limited_checks
+    )
+    assert not any(finding.check_id in plan_limited_checks for finding in report.findings)
+
+
+def test_archived_repository_code_scanning_is_not_applicable() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/repos/example/synthetic":
+            payload = cast(dict[str, object], _fixture("repository-metadata-complete.json"))
+            payload["archived"] = True
+            return httpx.Response(200, json=payload)
+        if "/code-scanning/" in request.url.path:
+            raise AssertionError("archived repositories must not request code scanning state")
+        return _response_for_complete_fixture(request)
+
+    report = _run(handler)
+
+    assert report.status is RunStatus.COMPLETE
+    assert _result(report, "security.code_scanning").coverage_state is CoverageState.NOT_APPLICABLE
 
 
 def test_verified_settings_and_security_drift_creates_sanitized_approval_findings() -> None:

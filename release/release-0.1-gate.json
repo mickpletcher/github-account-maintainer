@@ -25,7 +25,7 @@
     },
     {
       "id": "R01-05",
-      "requirement": "Deterministic metadata and community checks without cloning private content",
+      "requirement": "Deterministic metadata, community, settings, and security checks without cloning private content",
       "automated_evidence": ["tests/test_checks.py", "tests/test_release_0_1_gate.py"]
     },
     {
@@ -66,9 +66,9 @@
       "status": "passed",
       "repeated_runs": 2,
       "repository_count": 73,
-      "check_result_count": 1022,
-      "coverage_record_count": 1169,
-      "finding_count": 122,
+      "check_result_count": 1898,
+      "coverage_record_count": 2045,
+      "finding_count": 669,
       "repeated_results_match": true
     }
   }
