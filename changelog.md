@@ -9,7 +9,7 @@ This file records every repository change, including code, documentation, config
 - Added FUT-005 with twelve GET-only checks for branch protection, active rulesets, required reviews, required status checks, Actions policy, default workflow permissions, Dependabot alerts and security updates, secret scanning, push protection, code scanning, and private vulnerability reporting.
 - Added explicit `supported`, `not_applicable`, and `unverified` coverage states and fail-closed partial-run behavior for unverified requested evidence.
 - Added permission-aware synthetic contracts for complete, inaccessible, not-applicable, unverified, unsupported, and noncompliant settings and security evidence.
-- Added count-only expanded Release 0.1 live-pilot evidence for two matching GET-only runs across 73 repositories, 1,898 check results, 2,045 coverage records, 669 findings, and zero writes.
+- Added count-only expanded Release 0.1 live-pilot evidence for two matching GET-only runs across 73 repositories, 1,898 check results, 2,045 coverage records, 604 findings, and zero writes.
 - Added FUT-004 Release 0.1 gate manifest mapping all ten specification criteria to automated and live-pilot evidence.
 - Added a paginated synthetic Release 0.1 account fixture and end-to-end tests for separate credentials, public and private repositories, policy hashes, 14 checks per repository, report contracts, redaction, GET-only requests, partial coverage, and repeatability.
 - Added a count-only repeated live-pilot verifier that enforces minimal detail, serial requests, hard safety invariants, complete coverage, report schemas, and matching semantic fingerprints without persisting detailed reports.
@@ -42,6 +42,7 @@ This file records every repository change, including code, documentation, config
 
 - Expanded each in-scope repository audit from 14 to 26 deterministic checks while preserving GET-only requests, serial execution, minimal-detail redaction, stable findings, and exact terminal coverage.
 - Classified private repository branch and security restrictions as `unavailable_by_plan` and archived code scanning as `not_applicable`, while preserving fail-closed `inaccessible` behavior for actual public or credential authorization failures.
+- Treated HTTP 204 from the automated security-fixes endpoint as enabled, preserved unknown classic branch requirements when protection evidence is inaccessible, and treated confirmed disabled code scanning as supported noncompliance instead of plan unavailability.
 - Required audit credentials to use Metadata, Contents, Administration, and Code scanning alerts read access while continuing to prohibit every write permission.
 - Moved FUT-005 to `completed-upgrades.md`, added FUT-018 credential capability preflight and token templates to Tier 2, and synchronized the README, assessment, pilot procedure, gate evidence, and project specification.
 - Moved FUT-004 to `completed-upgrades.md`, added FUT-017 versioned release evidence bundles to Tier 2, and updated the README and assessment for pilot readiness.

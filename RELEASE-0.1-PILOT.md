@@ -83,7 +83,7 @@ The expanded private pilot passed on 2026-08-10 after FUT-005 was added:
 - two repeated runs;
 - 73 repositories discovered, requested, and audited;
 - 1,898 check results and 2,045 coverage records;
-- 669 findings;
+- 604 findings;
 - matching semantic results;
 - minimal detail and GET-only mode enforced;
 - zero automatic write operations.

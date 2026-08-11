@@ -46,6 +46,7 @@ def test_complete_contract_fixture_reports_explicit_outcomes_without_findings() 
     assert _result(report, "metadata.homepage").outcome is CheckOutcome.OBSERVED
     assert _result(report, "community.security").outcome is CheckOutcome.COMPLIANT
     assert _result(report, "community.support").outcome is CheckOutcome.OBSERVED
+    assert _result(report, "security.dependabot_security_updates").outcome is CheckOutcome.COMPLIANT
     assert all(
         record.state in {CoverageState.AUDITED, CoverageState.SUPPORTED, CoverageState.NOT_APPLICABLE}
         for record in report.coverage
@@ -255,6 +256,18 @@ def test_settings_and_security_checks_preserve_explicit_terminal_states() -> Non
     assert report.status is RunStatus.PARTIAL
     assert _result(report, "settings.rulesets").coverage_state is CoverageState.SUPPORTED
     assert _result(report, "settings.branch_protection").coverage_state is CoverageState.INACCESSIBLE
+    assert _result(report, "settings.branch_protection").current_state == {
+        "classic_protection": None,
+        "active_rule_count": 0,
+    }
+    assert _result(report, "settings.required_reviews").current_state == {
+        "classic_requirement": None,
+        "ruleset_requirement": False,
+    }
+    assert _result(report, "settings.required_status_checks").current_state == {
+        "classic_requirement": None,
+        "ruleset_requirement": False,
+    }
     assert _result(report, "security.secret_scanning").coverage_state is CoverageState.UNVERIFIED
     assert _result(report, "security.private_vulnerability_reporting").coverage_state is CoverageState.INACCESSIBLE
     assert not any(
@@ -312,6 +325,26 @@ def test_archived_repository_code_scanning_is_not_applicable() -> None:
 
     assert report.status is RunStatus.COMPLETE
     assert _result(report, "security.code_scanning").coverage_state is CoverageState.NOT_APPLICABLE
+
+
+def test_disabled_code_scanning_is_verified_noncompliance() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/repos/example/synthetic":
+            payload = cast(dict[str, object], _fixture("repository-metadata-complete.json"))
+            security = cast(dict[str, object], payload["security_and_analysis"])
+            security["code_security"] = {"status": "disabled"}
+            return httpx.Response(200, json=payload)
+        if "/code-scanning/" in request.url.path:
+            return httpx.Response(403, json={})
+        return _response_for_complete_fixture(request)
+
+    report = _run(handler)
+    result = _result(report, "security.code_scanning")
+
+    assert report.status is RunStatus.COMPLETE
+    assert result.coverage_state is CoverageState.SUPPORTED
+    assert result.outcome is CheckOutcome.NONCOMPLIANT
+    assert _finding(report, "security.code_scanning").severity.value == "high"
 
 
 def test_verified_settings_and_security_drift_creates_sanitized_approval_findings() -> None:
@@ -441,11 +474,7 @@ def _settings_security_response(request: httpx.Request) -> httpx.Response | None
     if path.endswith("/vulnerability-alerts"):
         return httpx.Response(204, headers=_permission_header("administration=read"))
     if path.endswith("/automated-security-fixes"):
-        return httpx.Response(
-            200,
-            json={"enabled": True, "paused": False},
-            headers=_permission_header("administration=read"),
-        )
+        return httpx.Response(204, headers=_permission_header("administration=read"))
     if path.endswith("/code-scanning/default-setup"):
         return httpx.Response(
             200,

@@ -8,7 +8,7 @@
 
 GitHub Account Maintainer is a local-first Python CLI and library for auditing GitHub account resources against an explicit policy. It verifies separate discovery and audit credentials, inventories repositories, applies declared scope, validates ephemeral metadata evidence, classifies seven repository dimensions with confidence and stable hashes, binds repository class and project type into strict layered policy, and evaluates metadata, community-file presence, default-branch controls, Actions permissions, and supported security features. Account reports preserve exact terminal coverage, threshold evaluation, and privacy-safe findings while redacting non-public repository identities by default.
 
-Release 0.1 has a versioned ten-criterion evidence manifest, a paginated public/private synthetic account contract, and a repeated live-pilot verifier. The verifier runs detailed audits only in memory and emits a count-only summary. The expanded 2026-08-10 private pilot completed two matching audits across 73 repositories, 1,898 check results, 2,045 coverage records, and 669 findings with zero writes.
+Release 0.1 has a versioned ten-criterion evidence manifest, a paginated public/private synthetic account contract, and a repeated live-pilot verifier. The verifier runs detailed audits only in memory and emits a count-only summary. The expanded 2026-08-10 private pilot completed two matching audits across 73 repositories, 1,898 check results, 2,045 coverage records, and 604 findings with zero writes.
 
 The implemented GitHub path is serial and GET-only. It cannot modify repositories, account settings, branches, pull requests, security settings, or other GitHub resources.
 
@@ -91,7 +91,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Ruff lint passes.
 - Ruff formatting checks pass.
 - Strict Pyright checks pass with no errors.
-- Pytest passes 134 tests with 92.89% total coverage.
+- Pytest passes 135 tests with 92.98% total coverage.
 - The lockfile is reproducible with `uv lock --check`.
 - GitHub Actions uses read-only permissions, pinned action SHAs, non-persistent checkout credentials, stale-run cancellation, and a job timeout.
 - CodeQL scans Python and GitHub Actions sources.
@@ -100,12 +100,12 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Every repository change is required to update this assessment and `changelog.md` in the same commit or pull request.
 - Planned upgrades are tracked by stable IDs in a three-tier future backlog and moved to a permanent completed ledger with verification evidence when implemented.
 - The README provides novice-focused installation, credential, configuration, command, privacy, troubleshooting, and development guidance.
-- The expanded count-only live pilot passed two matching GET-only runs across 73 repositories, 1,898 results, 2,045 coverage records, and 669 findings with zero writes. The credential preflight and plan-availability diagnostics exposed no repository or credential details.
+- The expanded count-only live pilot passed two matching GET-only runs across 73 repositories, 1,898 results, 2,045 coverage records, and 604 findings with zero writes. The credential preflight and plan-availability diagnostics exposed no repository or credential details.
 
 ## Next priorities
 
-1. Add Administration and Code scanning alerts read access to the audit token, then rerun the expanded two-pass count-only pilot.
-2. Implement FUT-006 local audit history and finding transitions.
+1. Implement FUT-006 local audit history and finding transitions.
+2. Implement FUT-018 credential capability preflight and token templates.
 3. Add explicit classification overrides and classification-drift diagnostics through FUT-015.
 
 ## Required maintenance
@@ -114,4 +114,4 @@ Every repository change must update this file and `changelog.md` in the same com
 
 When an upgrade is implemented, move its stable ID from `future-upgrades.md` to `completed-upgrades.md`, record the delivery and verification evidence, and add at least one new upgrade idea to the future backlog in the same pull request.
 
-**Latest assessment change:** Recorded the successful expanded FUT-005 live pilot, plan-aware private and archived repository coverage, 134-test verification, privacy-safe count evidence, and the completed read-only credential boundary.
+**Latest assessment change:** Recorded the successful expanded FUT-005 live pilot, plan-aware private and archived repository coverage, 135-test verification, status-only Dependabot handling, verified disabled code-scanning drift, unknown inaccessible branch evidence, and the completed read-only credential boundary.

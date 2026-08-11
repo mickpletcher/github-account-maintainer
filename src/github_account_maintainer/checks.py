@@ -481,7 +481,11 @@ def _evaluate_settings_and_security(
                 "active_rule_count": active_rules,
             },
         )
-        classic_reviews = _object_present(protection, "required_pull_request_reviews")
+        classic_reviews = (
+            _object_present(protection, "required_pull_request_reviews")
+            if protection_state is CoverageState.SUPPORTED
+            else None
+        )
         branch_values["settings.required_reviews"] = _combined_branch_control(
             protection_state,
             classic_reviews,
@@ -492,7 +496,9 @@ def _evaluate_settings_and_security(
                 "ruleset_requirement": "pull_request" in rule_types if rules is not None else None,
             },
         )
-        classic_checks = _required_status_checks_present(protection)
+        classic_checks = (
+            _required_status_checks_present(protection) if protection_state is CoverageState.SUPPORTED else None
+        )
         branch_values["settings.required_status_checks"] = _combined_branch_control(
             protection_state,
             classic_checks,
@@ -614,31 +620,12 @@ def _evaluate_settings_and_security(
     if finding is not None:
         findings.append(finding)
 
-    updates, updates_state = _get_object(
+    updates_value, updates_state = _get_enabled_endpoint(
         client,
         f"/repos/{target.api_name}/automated-security-fixes",
         permissions,
-        not_found=CoverageState.SUPPORTED,
+        payload_enabled=False,
     )
-    updates_value: bool | None
-    if updates is None and updates_state is CoverageState.SUPPORTED:
-        updates_value = False
-        updates_current: JsonValue = {"enabled": False, "paused": False}
-    elif updates is not None:
-        enabled = updates.get("enabled")
-        paused = updates.get("paused", False)
-        if not isinstance(enabled, bool) or not isinstance(paused, bool):
-            updates_state = CoverageState.UNVERIFIED
-            updates_value = None
-        else:
-            updates_value = enabled and not paused
-        updates_current = {
-            "enabled": enabled if isinstance(enabled, bool) else None,
-            "paused": paused if isinstance(paused, bool) else None,
-        }
-    else:
-        updates_value = None
-        updates_current = {"enabled": None, "paused": None}
     result, finding = _feature_result(
         target,
         "security.dependabot_security_updates",
@@ -646,8 +633,8 @@ def _evaluate_settings_and_security(
         policy.audit_dependabot,
         suppressed_checks,
         updates_state,
-        updates_current,
-        {"enabled": True, "paused": False},
+        {"enabled": updates_value},
+        {"enabled": True},
         compliant=updates_value,
         evidence="Dependabot security-update state evaluated",
         observed_at=observed_at,
@@ -1034,7 +1021,7 @@ def _code_scanning_state(
     if product_state is CoverageState.UNVERIFIED:
         product_value, product_state = _metadata_security_feature(repository_state, "advanced_security")
     if product_value is False:
-        return None, CoverageState.UNAVAILABLE_BY_PLAN, {"configured": None, "mode": None}
+        return False, CoverageState.SUPPORTED, {"configured": False, "mode": None}
     return (
         None,
         _worst_terminal_state(default_state, analyses_state, product_state),

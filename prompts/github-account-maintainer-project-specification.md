@@ -11,7 +11,7 @@ GitHub Account Maintainer is a policy-driven automation system that audits and m
 
 The system is audit-first and fail-closed. It may automatically apply only changes explicitly classified as safe by policy. Repository content changes are proposed through pull requests. Destructive, access-related, billable, or potentially breaking changes require explicit approval and are never silently applied.
 
-The current implementation is GET-only. It runs 26 checks per in-scope repository across metadata, community files, default-branch controls, Actions permissions, and supported security features. The expanded 2026-08-10 count-only pilot passed two matching audits across 73 repositories with 1,898 check results, 2,045 coverage records, 669 findings, and zero writes per run. FUT-005 is complete and live-verified with the documented read-only permissions and explicit plan-aware coverage.
+The current implementation is GET-only. It runs 26 checks per in-scope repository across metadata, community files, default-branch controls, Actions permissions, and supported security features. The expanded 2026-08-10 count-only pilot passed two matching audits across 73 repositories with 1,898 check results, 2,045 coverage records, 604 findings, and zero writes per run. FUT-005 is complete and live-verified with the documented read-only permissions and explicit plan-aware coverage.
 
 ### Product description
 
@@ -252,7 +252,7 @@ GitHub Account Maintainer audits availability and state for:
 - Required status checks and review requirements.
 - Force-push and branch-deletion protections.
 
-The system must distinguish unsupported, unavailable-by-plan, inherited, disabled, and misconfigured states. It must never represent an unavailable feature as a failure.
+The system must distinguish unsupported, unavailable-by-plan, inherited, disabled, and misconfigured states. It must never represent an unavailable feature as a failure, a confirmed disabled feature as unavailable-by-plan, or inaccessible evidence as a verified negative.
 
 ### 12.2 Access inventory
 
