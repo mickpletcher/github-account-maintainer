@@ -2,7 +2,7 @@
 
 GitHub Account Maintainer is a local command-line tool for inspecting the GitHub repositories your account can access. It is being built to compare those repositories with an explicit policy and report what is correct, missing, unsupported, or inaccessible.
 
-The current version is deliberately read-only. It can verify GitHub identities, inventory and classify repositories, redact private repository identities, bind classifications to layered policy, run repository checks, and aggregate an account audit. It cannot change GitHub.
+The current version is deliberately read-only. It can verify GitHub identities, inventory and classify repositories, redact private repository identities, bind classifications to layered policy, audit metadata, community files, repository settings, and security features, and aggregate an account audit. It cannot change GitHub.
 
 ## Contents
 
@@ -42,9 +42,9 @@ The package version is `0.1.0.dev0`. Release 0.1 is still under development.
 | Redact private repository identities | Implemented | Enabled by the default `minimal` report detail. |
 | Classify repositories and bind policy | Implemented | The account audit records confidence and binds repository-class, project-type, and repository policy. |
 | Resolve layered policy | Implemented | The account audit resolves and hashes policy separately for each in-scope repository. |
-| Audit metadata and community files | Implemented | The public `audit` command runs 14 deterministic checks per in-scope repository. |
+| Audit repository policy | Implemented | The public `audit` command runs 26 deterministic metadata, community, settings, and security checks per in-scope repository. |
 | Apply GitHub changes | Not implemented | No GitHub mutation endpoint exists. |
-| Full Release 0.1 audit | Pilot ready | The locked gate, synthetic contracts, count-only verifier, and private live procedure are implemented. |
+| Full Release 0.1 audit | Pilot passed | Two private read-only runs matched across 73 repositories with zero writes on 2026-08-10. |
 
 This status matters. A successful inventory does not mean the account passed a full security or compliance audit.
 
@@ -72,6 +72,9 @@ The implemented code can:
 - Bind the classified repository class and project type to the existing policy hierarchy before repository checks run.
 - Evaluate repository description, homepage, topic count, primary language, visibility, and archive state.
 - Detect eight common community files through GitHub's community-profile and contents metadata endpoints without cloning or reading file content.
+- Audit default-branch protection, active rules, required reviews, required status checks, Actions policy, and default workflow token permissions.
+- Audit Dependabot alerts and security updates, secret scanning, push protection, code scanning, and private vulnerability reporting.
+- Distinguish supported, inaccessible, not-applicable, unverified, unsupported, and unavailable-by-plan settings evidence without treating missing evidence as compliance.
 - Distinguish compliant, noncompliant, observed, unknown, and inaccessible outcomes with a terminal coverage state for every check.
 - Produce privacy-safe repository findings with stable check IDs, exact current and desired states, evidence, severity, and remediation class.
 - Run the complete account audit from one CLI command and continue across repository-specific failures.
@@ -198,11 +201,11 @@ GitHub's current token steps are documented in [Managing your personal access to
 7. Set an expiration date.
 8. Select the personal account or organization that owns the repositories you want to inventory.
 9. Select all repositories or only the repositories that should be visible to this tool.
-10. Grant repository **Metadata** permission with read access. Also grant repository **Contents** read access if the token will run `audit`.
+10. Grant repository **Metadata** read access for discovery. For the complete `audit`, also grant repository **Contents**, **Administration**, and **Code scanning alerts** read access.
 11. Do not grant write permissions for the current release.
 12. Generate the token and copy it once.
 
-The implemented `GET /user` call does not require an additional fine-grained permission. Inventory requires repository **Metadata: read** access. The audit also lists community-file metadata and directories, which requires repository **Contents: read** access. See GitHub's official endpoint documentation for [the authenticated user](https://docs.github.com/en/rest/users/users#get-the-authenticated-user) and [repository inventory](https://docs.github.com/en/rest/repos/repos#list-repositories-for-the-authenticated-user).
+The implemented `GET /user` call does not require an additional fine-grained permission. Inventory requires repository **Metadata: read** access. The complete audit requires **Contents: read** for community-file metadata, **Administration: read** for branch protection, Actions, Dependabot, and code-scanning setup, and **Code scanning alerts: read** to detect advanced or external code-scanning analyses. No write permission is required. See GitHub's official endpoint documentation for [repository inventory](https://docs.github.com/en/rest/repos/repos#list-repositories-for-the-authenticated-user), [branch protection](https://docs.github.com/en/rest/branches/branch-protection), [Actions permissions](https://docs.github.com/en/rest/actions/permissions), and [code scanning](https://docs.github.com/en/rest/code-scanning/code-scanning).
 
 Important token limitations:
 
@@ -236,7 +239,7 @@ To run the full audit, also store a token under the audit account:
 uv run keyring set github-account-maintainer audit
 ```
 
-That token needs Metadata and Contents read access. If one least-privilege token has both permissions, you may paste the same token into both prompts.
+That token needs Metadata, Contents, Administration, and Code scanning alerts read access. If one least-privilege token has all four read permissions, you may paste the same token into both prompts.
 
 You can inspect keyring diagnostics without printing the token:
 
@@ -408,7 +411,7 @@ The command performs this sequence:
 3. Applies `repositories.include_patterns` and `repositories.exclude_patterns`.
 4. Reads repository metadata and language totals for deterministic classification.
 5. Resolves and hashes the effective policy for that repository.
-6. Runs six metadata checks and eight community-file checks.
+6. Runs six metadata, eight community-file, six repository-settings, and six security-feature checks.
 7. Continues to the next repository if one repository is inaccessible or returns invalid evidence.
 8. Aggregates policy bindings, results, findings, permissions, and terminal coverage.
 9. Evaluates findings against `audit.failure_threshold`.
@@ -502,7 +505,7 @@ This command verifies identity and then reads every page returned by `GET /user/
 uv run github-account-maintainer audit [--config PATH] [--format json|markdown]
 ```
 
-This command inventories repositories with the discovery credential, verifies the separate audit credential, applies repository scope patterns, classifies each in-scope repository, binds its effective policy, runs 14 checks, and aggregates the result. It uses only GET requests and does not change GitHub.
+This command inventories repositories with the discovery credential, verifies the separate audit credential, applies repository scope patterns, classifies each in-scope repository, binds its effective policy, runs 26 checks, and aggregates the result. It uses only GET requests and does not change GitHub.
 
 For a readable report:
 
@@ -517,19 +520,23 @@ The command continues when one repository is inaccessible or malformed. The fina
 
 FUT-002 provides the read-only repository check layer used by the account-level `audit` command.
 
-The layer performs 14 stable checks:
+The layer performs 26 stable checks:
 
 - Metadata: `metadata.description`, `metadata.homepage`, `metadata.topics`, `metadata.primary_language`, `metadata.visibility`, and `metadata.archive_state`.
 - Community files: `community.readme`, `community.license`, `community.security`, `community.contributing`, `community.code_of_conduct`, `community.support`, `community.issue_template`, and `community.pull_request_template`.
+- Repository settings: `settings.branch_protection`, `settings.rulesets`, `settings.required_reviews`, `settings.required_status_checks`, `settings.actions_permissions`, and `settings.actions_workflow_permissions`.
+- Security features: `security.dependabot_alerts`, `security.dependabot_security_updates`, `security.secret_scanning`, `security.push_protection`, `security.code_scanning`, and `security.private_vulnerability_reporting`.
 
 Each result records:
 
 - `outcome`: `compliant`, `noncompliant`, `observed`, `unknown`, or `inaccessible`.
-- `coverage_state`: the existing terminal coverage vocabulary, including `audited`, `inherited`, `inaccessible`, `skipped_by_policy`, and `failed`.
+- `coverage_state`: the terminal coverage vocabulary, including `audited`, `supported`, `unsupported`, `unavailable_by_plan`, `inherited`, `inaccessible`, `not_applicable`, `unverified`, `skipped_by_policy`, `not_requested`, and `failed`.
 - Sanitized current and desired state.
 - Count-only or presence-only evidence.
 
 Required values that are confirmed missing produce findings. Optional values are observed without producing false violations. Repository or community-profile authorization and not-found responses are treated as inaccessible. A missing directory listing is treated as an absent directory only after repository access succeeds. Malformed or operational failures are unknown and failed. An active policy exception marks its check `skipped_by_policy` and does not produce a finding.
+
+Settings and security checks fail closed. Supported evidence can produce a compliant or noncompliant result. Inaccessible or unverified evidence makes the account audit partial and does not produce a false finding. A feature that does not apply to the repository visibility or branch state uses `not_applicable`. A feature that GitHub does not provide for the active plan uses `unavailable_by_plan`.
 
 The implementation uses only these GET requests:
 
@@ -537,6 +544,10 @@ The implementation uses only these GET requests:
 - `GET /repos/{owner}/{repository}` for metadata.
 - `GET /repos/{owner}/{repository}/community/profile` for GitHub-recognized community files on non-forks.
 - `GET /repos/{owner}/{repository}/contents`, plus `.github` and `docs` directory listings, for file-presence metadata.
+- `GET /repos/{owner}/{repository}/rules/branches/{branch}` and the default-branch protection endpoint for branch policy.
+- Repository Actions policy and default workflow permission GET endpoints.
+- Dependabot alert and automated security-fix status GET endpoints.
+- Repository security-and-analysis metadata, code-scanning setup or count-only analysis presence, and private vulnerability reporting status.
 
 It does not clone repositories or request file bodies. Inherited community files are reported with `inherited` coverage when GitHub identifies a source outside the audited repository.
 
@@ -590,7 +601,7 @@ The configuration is strict YAML. Indentation matters. Unknown fields, invalid v
 | `metadata` | Active desired-state policy for the repository metadata check layer. |
 | `community` | Active required or optional policy for eight common community files. |
 | `social_preview` | Validated policy for planned social-preview work. Not active yet. |
-| `security` | Validated desired security audit policy. The security audit is not active yet. |
+| `security` | Active read-only policy toggles for repository settings and security-feature checks. |
 | `backup` | Reserved and forced disabled in the current schema. |
 | `notifications` | Validated notification policy. Notifications are not active yet. |
 | `policy` | Stores repository-class, project-type, repository-specific, and exception overrides. |
@@ -664,7 +675,7 @@ Store the audit token after storing the discovery token:
 uv run keyring set github-account-maintainer audit
 ```
 
-The audit token needs read access to repository Metadata and Contents for every repository in scope. You may store the same least-privilege token under both keyring accounts, but separate credentials make the access boundary explicit.
+The audit token needs repository Metadata, Contents, Administration, and Code scanning alerts read access for every repository in scope. You may store the same least-privilege token under both keyring accounts, but separate credentials make the access boundary explicit.
 
 ### Audit threshold and repository scope
 
@@ -680,6 +691,28 @@ repositories:
 ```
 
 Valid thresholds are `informational`, `low`, `medium`, `high`, and `critical`. Matching is case-insensitive and uses shell-style wildcard patterns against `owner/repository`. An excluded repository remains in inventory coverage but its classification and checks are marked `not_requested`.
+
+### Settings and security checks
+
+The default configuration enables every implemented read-only settings and security check:
+
+```yaml
+security:
+  audit_branch_protection: true
+  audit_rulesets: true
+  audit_required_reviews: true
+  audit_required_status_checks: true
+  audit_actions_permissions: true
+  audit_actions_workflow_permissions: true
+  audit_dependabot: true
+  audit_secret_scanning: true
+  audit_push_protection: true
+  audit_code_scanning: true
+  audit_private_vulnerability_reporting: true
+  security_alert_dismissal: prohibited
+```
+
+Setting an audit toggle to `false` marks that check `skipped_by_policy`. It does not change GitHub. The `security_alert_dismissal` value is fixed at `prohibited`.
 
 ### Report privacy
 
@@ -948,9 +981,9 @@ When a tracked upgrade is implemented:
 
 ## Release roadmap
 
-The Release 0.1 implementation is ready for a private local pilot. Before tagging the release:
+The Release 0.1 private pilot passed on 2026-08-10. It completed two matching GET-only audits across 73 repositories with zero writes. Before tagging the release:
 
-1. Run the count-only pilot with a private minimal-detail configuration and valid read-only credentials.
+1. Rerun the count-only pilot after material audit changes with a private minimal-detail configuration and valid read-only credentials.
 2. Retain only the count-only result and CI links as release evidence. Do not commit private audit output.
 
 No remediation work begins until the read-only Release 0.1 gate passes.

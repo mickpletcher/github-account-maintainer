@@ -165,6 +165,12 @@ class SocialPreviewConfig(StrictModel):
 
 
 class SecurityConfig(StrictModel):
+    audit_branch_protection: bool = True
+    audit_rulesets: bool = True
+    audit_required_reviews: bool = True
+    audit_required_status_checks: bool = True
+    audit_actions_permissions: bool = True
+    audit_actions_workflow_permissions: bool = True
     audit_dependabot: bool = True
     audit_secret_scanning: bool = True
     audit_push_protection: bool = True
@@ -246,6 +252,12 @@ class SocialPreviewPolicyPatch(StrictModel):
 
 
 class SecurityPolicyPatch(StrictModel):
+    audit_branch_protection: bool | None = None
+    audit_rulesets: bool | None = None
+    audit_required_reviews: bool | None = None
+    audit_required_status_checks: bool | None = None
+    audit_actions_permissions: bool | None = None
+    audit_actions_workflow_permissions: bool | None = None
     audit_dependabot: bool | None = None
     audit_secret_scanning: bool | None = None
     audit_push_protection: bool | None = None

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "release": "0.1",
-  "status": "ready_for_local_pilot",
+  "status": "live_pilot_passed",
   "criteria": [
     {
       "id": "R01-01",
@@ -60,6 +60,16 @@
     "report_detail": "minimal",
     "summary_detail": "count_only",
     "request_mode": "get_only",
-    "automatic_write_operations": []
+    "automatic_write_operations": [],
+    "latest_evidence": {
+      "date": "2026-08-10",
+      "status": "passed",
+      "repeated_runs": 2,
+      "repository_count": 73,
+      "check_result_count": 1022,
+      "coverage_record_count": 1169,
+      "finding_count": 122,
+      "repeated_results_match": true
+    }
   }
 }
