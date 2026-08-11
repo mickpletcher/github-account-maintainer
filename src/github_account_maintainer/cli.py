@@ -12,11 +12,13 @@ from github_account_maintainer.auth import AuthenticationPreflightError, run_aut
 from github_account_maintainer.config import AppConfig, default_config, default_config_path, load_config, write_config
 from github_account_maintainer.credentials import CredentialResolutionError
 from github_account_maintainer.github_api import GitHubApiError, GitHubTransportError
+from github_account_maintainer.history import HistoryError, read_audit_history, record_audit_history
 from github_account_maintainer.inventory import collect_inventory
 from github_account_maintainer.models import RunStatus
 from github_account_maintainer.reporting import (
     render_account_audit_markdown,
     render_auth_markdown,
+    render_history_markdown,
     render_inventory_markdown,
     render_json,
 )
@@ -102,11 +104,23 @@ def inventory(
 def audit(
     config_path: Annotated[Path | None, typer.Option("--config", help="Local configuration path.")] = None,
     output_format: Annotated[OutputFormat, typer.Option("--format", help="Output format.")] = OutputFormat.JSON,
+    no_history: Annotated[
+        bool,
+        typer.Option("--no-history", help="Do not record this audit in the local SQLite history."),
+    ] = False,
 ) -> None:
     config = load_app_config(config_path or default_config_path())
     try:
         report = run_account_audit(config)
-    except (CredentialResolutionError, AuthenticationPreflightError, GitHubApiError, GitHubTransportError) as error:
+        if config.history.enabled and not no_history:
+            record_audit_history(config, report)
+    except (
+        CredentialResolutionError,
+        AuthenticationPreflightError,
+        GitHubApiError,
+        GitHubTransportError,
+        HistoryError,
+    ) as error:
         fail_operational(error)
     typer.echo(
         render_json(report) if output_format is OutputFormat.JSON else render_account_audit_markdown(report),
@@ -115,6 +129,23 @@ def audit(
     exit_code = audit_exit_code(report)
     if exit_code:
         raise typer.Exit(exit_code)
+
+
+@app.command("history")
+def history(
+    config_path: Annotated[Path | None, typer.Option("--config", help="Local configuration path.")] = None,
+    output_format: Annotated[OutputFormat, typer.Option("--format", help="Output format.")] = OutputFormat.JSON,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", min=1, max=100, help="Maximum number of recent audit runs to return."),
+    ] = 20,
+) -> None:
+    config = load_app_config(config_path or default_config_path())
+    try:
+        report = read_audit_history(config, limit=limit)
+    except HistoryError as error:
+        fail_operational(error)
+    typer.echo(render_json(report) if output_format is OutputFormat.JSON else render_history_markdown(report), nl=False)
 
 
 def load_app_config(path: Path) -> AppConfig:

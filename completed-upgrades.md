@@ -12,6 +12,15 @@ This file is the permanent record of upgrades completed from `future-upgrades.md
 
 ## Completed
 
+### FUT-006: Local audit history and finding transitions
+
+- Former tier: Tier 2, High value
+- Completed: 2026-08-11
+- Pull request or commit: This pull request; squash commit pending
+- Delivered: Added default sanitized local audit-history recording in a versioned SQLite database outside Git worktrees; per-account hashed identity; deterministic idempotent run and finding identities; chronological run enforcement; new, persistent, resolved, and regressed transitions; protection against false resolution after partial audits; count-only JSON and Markdown `history` reports; a per-run `--no-history` option and persistent `history.enabled` setting; and fail-closed handling for unsafe paths, irregular files, integrity failures, duplicate findings, and newer schemas.
+- Verification: Synthetic tests cover all four transitions, partial-run resolution protection, idempotency, sanitized storage, empty reads, account filtering, chronological enforcement, path rejection, transactional v1-to-v2 migration, pre-migration backup readability, rollback on migration failure, and newer-schema rejection. Ruff, formatting, strict Pyright, 149 pytest tests with 93.19% coverage, lock validation, ledger uniqueness, and prompt/README/assessment synchronization pass.
+- Replacement idea: FUT-019 audit-history integrity verification and recovery planning was added to Tier 2.
+
 ### FUT-005: Settings and security coverage audit
 
 - Former tier: Tier 2, High value

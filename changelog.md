@@ -6,6 +6,11 @@ This file records every repository change, including code, documentation, config
 
 ### Added
 
+- Added FUT-006 sanitized audit history in a versioned local SQLite database with per-account hashed identity, stable run and finding keys, and new, persistent, resolved, and regressed transitions.
+- Added the `history` command with count-only JSON and Markdown summaries, a 1 through 100 run limit, default audit recording, the `--no-history` per-run escape, and the persistent `history.enabled` configuration switch.
+- Added numbered transactional forward-only migrations, database integrity checks, readable pre-migration backups for nonempty databases, newer-schema rejection, chronological ordering, duplicate-run idempotency, and fail-closed local path validation.
+- Added repository ignore rules for SQLite databases, journals, write-ahead logs, shared-memory files, and migration-backup directories as defense in depth.
+- Added synthetic history contracts for privacy exclusions, all transition states, partial-run resolution protection, migrations, rollback, backups, unsafe paths, empty history, newer schemas, and CLI behavior.
 - Added FUT-005 with twelve GET-only checks for branch protection, active rulesets, required reviews, required status checks, Actions policy, default workflow permissions, Dependabot alerts and security updates, secret scanning, push protection, code scanning, and private vulnerability reporting.
 - Added explicit `supported`, `not_applicable`, and `unverified` coverage states and fail-closed partial-run behavior for unverified requested evidence.
 - Added permission-aware synthetic contracts for complete, inaccessible, not-applicable, unverified, unsupported, and noncompliant settings and security evidence.
@@ -40,6 +45,8 @@ This file records every repository change, including code, documentation, config
 
 ### Changed
 
+- Moved FUT-006 to `completed-upgrades.md`, added FUT-019 audit-history integrity verification and recovery planning to Tier 2, and synchronized the project prompt, README, assessment, changelog, and upgrade ledgers.
+- Updated `audit` to record sanitized local history after GitHub reads while preserving its JSON and Markdown output contracts and exit-code precedence. Partial audits are recorded but cannot resolve findings that were not observed.
 - Expanded each in-scope repository audit from 14 to 26 deterministic checks while preserving GET-only requests, serial execution, minimal-detail redaction, stable findings, and exact terminal coverage.
 - Classified private repository branch and security restrictions as `unavailable_by_plan` and archived code scanning as `not_applicable`, while preserving fail-closed `inaccessible` behavior for actual public or credential authorization failures.
 - Treated HTTP 204 from the automated security-fixes endpoint as enabled, preserved unknown classic branch requirements when protection evidence is inaccessible, and treated confirmed disabled code scanning as supported noncompliance instead of plan unavailability.
@@ -61,6 +68,8 @@ This file records every repository change, including code, documentation, config
 
 ### Security
 
+- Audit history excludes account and repository names, credential references, URLs, evidence, and raw current and desired values. It stores only hashed account identity, numeric repository IDs, stable check metadata, one-way state hashes, timestamps, and counts outside the repository.
+- History state rejects Git worktrees, symbolic links, junctions, irregular database or backup targets, out-of-order runs, duplicate finding identities, corrupt databases, and schemas newer than the application.
 - Settings and security evidence now stores only booleans, policy enums, and counts; branch names, ruleset names, status-check names, action allowlists, analysis details, alert content, and tokens are never serialized.
 - Inaccessible or unverified security evidence cannot be reported as compliant and causes exit code `2`; verified noncompliance produces medium or high approval-required findings without enabling remediation.
 - Plan-limited and archived feature states produce no false findings, expose no repository identities, and remain distinct from permission failures.

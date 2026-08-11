@@ -2,7 +2,7 @@
 
 GitHub Account Maintainer is a local command-line tool for inspecting the GitHub repositories your account can access. It is being built to compare those repositories with an explicit policy and report what is correct, missing, unsupported, or inaccessible.
 
-The current version is deliberately read-only. It can verify GitHub identities, inventory and classify repositories, redact private repository identities, bind classifications to layered policy, audit metadata, community files, repository settings, and security features, and aggregate an account audit. It cannot change GitHub.
+The current version is deliberately read-only. It can verify GitHub identities, inventory and classify repositories, redact private repository identities, bind classifications to layered policy, audit metadata, community files, repository settings, and security features, aggregate an account audit, and retain sanitized local finding history. It cannot change GitHub.
 
 ## Contents
 
@@ -18,6 +18,7 @@ The current version is deliberately read-only. It can verify GitHub identities, 
 - [Verify authentication](#verify-authentication)
 - [Inventory repositories](#inventory-repositories)
 - [Audit repositories](#audit-repositories)
+- [Review audit history](#review-audit-history)
 - [Run the Release 0.1 pilot](#run-the-release-01-pilot)
 - [Command reference](#command-reference)
 - [Repository check foundation](#repository-check-foundation)
@@ -43,6 +44,7 @@ The package version is `0.1.0.dev0`. Release 0.1 is still under development.
 | Classify repositories and bind policy | Implemented | The account audit records confidence and binds repository-class, project-type, and repository policy. |
 | Resolve layered policy | Implemented | The account audit resolves and hashes policy separately for each in-scope repository. |
 | Audit repository policy | Implemented | The public `audit` command runs 26 deterministic metadata, community, settings, and security checks per in-scope repository. |
+| Track audit history | Implemented | A versioned local SQLite database tracks new, persistent, resolved, and regressed findings without storing repository names or report evidence. |
 | Apply GitHub changes | Not implemented | No GitHub mutation endpoint exists. |
 | Full Release 0.1 audit | Pilot passed | Two expanded 26-check read-only runs matched across 73 repositories with zero writes on 2026-08-10. |
 
@@ -80,6 +82,8 @@ The implemented code can:
 - Run the complete account audit from one CLI command and continue across repository-specific failures.
 - Apply include and exclude patterns before requesting repository audit endpoints.
 - Aggregate schema-versioned JSON or Markdown bindings, results, findings, severity counts, accepted permissions, and coverage.
+- Record sanitized audit runs and finding transitions in a versioned local SQLite database.
+- Report recent audit history as count-only JSON or Markdown without exposing account or repository names.
 - Exit with code `0`, `1`, or `2` based on complete coverage and the configured finding threshold.
 
 ## What the tool does not do
@@ -117,6 +121,8 @@ The project uses these boundaries:
 - Private and internal repository names and URLs are redacted in `minimal` detail mode.
 - Repository checks report presence and counts. They do not store descriptions, homepage URLs, topic names, language names, file paths, or file content.
 - Classification evidence treats raw topics and language names as ephemeral input. Serialized evidence and binding reports exclude those values and the internal repository API name.
+- Audit history stores a hashed account key, numeric repository IDs, stable check metadata, transition counts, timestamps, and one-way state hashes. It does not store account names, repository names, credentials, URLs, evidence, or raw current and desired values.
+- SQLite migrations are numbered, transactional, and forward-only. A local backup is created before a nonempty database is upgraded.
 - Default configuration, state, cache, report, log, browser, and backup-metadata paths are outside the cloned repository.
 
 Treat a personal access token like a password. Never paste it into `config.yaml`, a command history entry, an issue, a pull request, a report, or a committed file.
@@ -415,6 +421,7 @@ The command performs this sequence:
 7. Continues to the next repository if one repository is inaccessible or returns invalid evidence.
 8. Aggregates policy bindings, results, findings, permissions, and terminal coverage.
 9. Evaluates findings against `audit.failure_threshold`.
+10. Records a sanitized local run and its finding transitions when history is enabled.
 
 JSON is the default and is intended for local automation:
 
@@ -427,6 +434,39 @@ $auditExitCode = $LASTEXITCODE
 Treat saved audit reports as private local data. Minimal mode redacts private and internal names, but reports still contain public repository names, numeric repository IDs, policy decisions, findings, and operational coverage.
 
 Exit code `0` means complete coverage with no finding at or above the configured threshold. Code `1` means complete coverage with a threshold finding. Code `2` means coverage is partial, even if findings were also produced. Code `3` means the configuration or command input is invalid.
+
+By default, complete and partial audit results are recorded in:
+
+```text
+%LOCALAPPDATA%\GitHubAccountMaintainer\state\audit-history.sqlite3
+```
+
+This database is local application state. It is not inside the cloned repository and is not pushed to GitHub. To skip history for one audit, add `--no-history`. To disable automatic history for all audits using a configuration, set `history.enabled` to `false`.
+
+## Review audit history
+
+Show the 20 most recent stored runs as readable Markdown:
+
+```powershell
+uv run github-account-maintainer history --format markdown
+```
+
+JSON is the default. Use `--limit` to return between 1 and 100 recent runs:
+
+```powershell
+uv run github-account-maintainer history --limit 50
+```
+
+The history report contains run timestamps, complete or partial status, repository and finding counts, a one-way run ID, and these transition counts:
+
+- `new`: The finding identity has not been seen before.
+- `persistent`: The finding was active in local history and appeared again.
+- `resolved`: A complete audit no longer contains a previously active finding.
+- `regressed`: A resolved finding appeared again.
+
+A partial audit never resolves an absent finding. Missing evidence is not proof that a problem was fixed. The history command returns only sanitized counts and run metadata. It does not return finding evidence, current or desired values, repository names, credential references, URLs, or local file paths.
+
+Runs must be recorded in chronological order. Re-recording the same audit is idempotent and does not duplicate events. The tool rejects a database created by a newer schema. When an older nonempty database needs an upgrade, the tool checks database integrity, creates a timestamped backup under the local state directory, and applies each numbered migration in its own transaction.
 
 ## Run the Release 0.1 pilot
 
@@ -504,10 +544,10 @@ This command verifies identity and then reads every page returned by `GET /user/
 ### `audit`
 
 ```powershell
-uv run github-account-maintainer audit [--config PATH] [--format json|markdown]
+uv run github-account-maintainer audit [--config PATH] [--format json|markdown] [--no-history]
 ```
 
-This command inventories repositories with the discovery credential, verifies the separate audit credential, applies repository scope patterns, classifies each in-scope repository, binds its effective policy, runs 26 checks, and aggregates the result. It uses only GET requests and does not change GitHub.
+This command inventories repositories with the discovery credential, verifies the separate audit credential, applies repository scope patterns, classifies each in-scope repository, binds its effective policy, runs 26 checks, aggregates the result, and records sanitized history unless configuration or `--no-history` disables it. It uses only GET requests and does not change GitHub.
 
 For a readable report:
 
@@ -517,6 +557,14 @@ $LASTEXITCODE
 ```
 
 The command continues when one repository is inaccessible or malformed. The final report marks every affected check with terminal coverage and exits with code `2` so partial evidence cannot look complete.
+
+### `history`
+
+```powershell
+uv run github-account-maintainer history [--config PATH] [--format json|markdown] [--limit 1..100]
+```
+
+This command reads sanitized run and transition counts for the configured account. It does not contact GitHub. If no history database exists, it returns an empty report without creating one.
 
 ## Repository check foundation
 
@@ -597,6 +645,7 @@ The configuration is strict YAML. Indentation matters. Unknown fields, invalid v
 | `local_data` | Defines local directories, report detail, and retention values. |
 | `safety` | Enforces non-overridable write and approval boundaries. |
 | `audit` | Sets the finding severity that makes a complete audit exit with code `1`. |
+| `history` | Enables or disables automatic sanitized SQLite history recording for `audit`. |
 | `repositories` | Supplies account-wide repository policy defaults. Include and exclude patterns are applied by `audit`. |
 | `pins` | Validated policy for the planned profile-pin feature. Not active yet. |
 | `readme` | Validated policy for planned README checks and remediation. Not active yet. |
@@ -693,6 +742,17 @@ repositories:
 ```
 
 Valid thresholds are `informational`, `low`, `medium`, `high`, and `critical`. Matching is case-insensitive and uses shell-style wildcard patterns against `owner/repository`. An excluded repository remains in inventory coverage but its classification and checks are marked `not_requested`.
+
+### Audit history
+
+History is enabled by default:
+
+```yaml
+history:
+  enabled: true
+```
+
+Set `enabled: false` to prevent future `audit` commands from writing local history. This does not delete existing history. The `history` command can still read an existing database. Retention is not automatic in the current release because pruning requires its own explicit plan.
 
 ### Settings and security checks
 
@@ -805,7 +865,7 @@ The built-in metadata policy requires a description, at least one topic, and a p
 
 ### Output formats
 
-`auth check`, `inventory`, and `audit` support:
+`auth check`, `inventory`, `audit`, and `history` support:
 
 - `json`: Machine-readable output. This is the default.
 - `markdown`: Human-readable output.
