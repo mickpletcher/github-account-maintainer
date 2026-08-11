@@ -9,6 +9,7 @@ from pydantic import SecretStr
 
 from github_account_maintainer.account_audit import AccountAuditReport, audit_exit_code, run_account_audit
 from github_account_maintainer.auth import ClientFactory
+from github_account_maintainer.checks import ALL_CHECKS
 from github_account_maintainer.config import AppConfig, default_config
 from github_account_maintainer.credentials import ResolvedCredential
 from github_account_maintainer.github_api import GitHubApiClient
@@ -38,7 +39,7 @@ def test_account_audit_aggregates_multiple_repositories_and_redacts_private_iden
     assert report.requested_repository_count == 2
     assert report.audited_repository_count == 2
     assert len(report.bindings) == 2
-    assert len(report.results) == 28
+    assert len(report.results) == 2 * len(ALL_CHECKS)
     assert len(report.findings) == 0
     assert report.finding_summary.threshold.value == "low"
     assert audit_exit_code(report) == 0
@@ -101,7 +102,7 @@ def test_account_audit_continues_after_inaccessible_repository_and_exits_two() -
 
     assert report.status is RunStatus.PARTIAL
     assert report.audited_repository_count == 1
-    assert len(report.results) == 28
+    assert len(report.results) == 2 * len(ALL_CHECKS)
     assert any(record.repository_id == 102 and record.state is CoverageState.INACCESSIBLE for record in report.coverage)
     assert audit_exit_code(report) == 2
 
@@ -220,12 +221,19 @@ def _metadata(repository_id: int, *, missing_required: bool = False) -> dict[str
         "visibility": "private" if repository_id == 102 else "public",
         "archived": False,
         "fork": False,
+        "default_branch": "main",
         "owner": {"type": "User"},
         "is_template": False,
         "mirror_url": None,
         "size": 42,
         "has_pages": False,
         "pushed_at": "2026-08-01T12:00:00Z",
+        "security_and_analysis": {
+            "advanced_security": {"status": "enabled"},
+            "code_security": {"status": "enabled"},
+            "secret_scanning": {"status": "enabled"},
+            "secret_scanning_push_protection": {"status": "enabled"},
+        },
     }
 
 
@@ -236,6 +244,34 @@ def _complete_response(request: httpx.Request, repositories: list[dict[str, obje
         return httpx.Response(200, json=repositories, headers={"X-Accepted-GitHub-Permissions": "metadata=read"})
     if request.url.path.endswith("/languages"):
         return httpx.Response(200, json={"PowerShell": 200})
+    if request.url.path.endswith("/rules/branches/main"):
+        return httpx.Response(200, json=[{"type": "pull_request"}, {"type": "required_status_checks"}])
+    if request.url.path.endswith("/branches/main/protection"):
+        return httpx.Response(
+            200,
+            json={
+                "required_pull_request_reviews": {"required_approving_review_count": 1},
+                "required_status_checks": {"contexts": ["validation"], "checks": []},
+            },
+        )
+    if request.url.path.endswith("/actions/permissions"):
+        return httpx.Response(
+            200,
+            json={"enabled": True, "allowed_actions": "selected", "sha_pinning_required": True},
+        )
+    if request.url.path.endswith("/actions/permissions/workflow"):
+        return httpx.Response(
+            200,
+            json={"default_workflow_permissions": "read", "can_approve_pull_request_reviews": False},
+        )
+    if request.url.path.endswith("/vulnerability-alerts"):
+        return httpx.Response(204)
+    if request.url.path.endswith("/automated-security-fixes"):
+        return httpx.Response(200, json={"enabled": True, "paused": False})
+    if request.url.path.endswith("/code-scanning/default-setup"):
+        return httpx.Response(200, json={"state": "configured"})
+    if request.url.path.endswith("/private-vulnerability-reporting"):
+        return httpx.Response(200, json={"enabled": True})
     if request.url.path.endswith("/community/profile"):
         return httpx.Response(200, json=_fixture("community-profile-complete.json"))
     if "/contents" in request.url.path:

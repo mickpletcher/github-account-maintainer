@@ -13,10 +13,13 @@ class StrictModel(BaseModel):
 
 class CoverageState(StrEnum):
     AUDITED = "audited"
+    SUPPORTED = "supported"
     UNSUPPORTED = "unsupported"
     UNAVAILABLE_BY_PLAN = "unavailable_by_plan"
     INHERITED = "inherited"
     INACCESSIBLE = "inaccessible"
+    NOT_APPLICABLE = "not_applicable"
+    UNVERIFIED = "unverified"
     SKIPPED_BY_POLICY = "skipped_by_policy"
     NOT_REQUESTED = "not_requested"
     FAILED = "failed"

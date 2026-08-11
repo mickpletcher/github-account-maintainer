@@ -306,7 +306,10 @@ def _unavailable_results(
 def _run_status(inventory_status: RunStatus, coverage: list[CoverageRecord]) -> RunStatus:
     if inventory_status is RunStatus.PARTIAL:
         return RunStatus.PARTIAL
-    if any(record.state in {CoverageState.FAILED, CoverageState.INACCESSIBLE} for record in coverage):
+    if any(
+        record.state in {CoverageState.FAILED, CoverageState.INACCESSIBLE, CoverageState.UNVERIFIED}
+        for record in coverage
+    ):
         return RunStatus.PARTIAL
     return RunStatus.COMPLETE
 

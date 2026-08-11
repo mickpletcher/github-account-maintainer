@@ -12,13 +12,22 @@ This file is the permanent record of upgrades completed from `future-upgrades.md
 
 ## Completed
 
+### FUT-005: Settings and security coverage audit
+
+- Former tier: Tier 2, High value
+- Completed: 2026-08-10
+- Pull request or commit: [PR #15](https://github.com/mickpletcher/github-account-maintainer/pull/15)
+- Delivered: Added twelve GET-only repository settings and security checks for default-branch protection, active rulesets, required reviews, required status checks, Actions policy, default workflow token permissions, Dependabot alerts and security updates, secret scanning, push protection, code scanning, and private vulnerability reporting. Added explicit supported, inaccessible, not-applicable, unavailable-by-plan, and unverified coverage states; fail-closed partial-run handling; permission-aware endpoint classification; count-only security evidence; policy toggles; and medium or high findings for verified noncompliance.
+- Verification: Synthetic contracts cover complete settings and security evidence plus supported, inaccessible, not-applicable, unavailable-by-plan, unverified, unsupported, archived, plan-restricted, status-only, disabled, and permission-failure behavior. The locked suite passes Ruff, formatting, strict Pyright, and 135 pytest tests with 92.98% coverage. The expanded private pilot passed two matching GET-only audits across 73 repositories with 1,898 results, 2,045 coverage records, 604 findings, minimal detail, and zero writes. Credential and plan-availability diagnostics exposed no repository or credential details.
+- Replacement idea: FUT-018 credential capability preflight and token templates was added to Tier 2.
+
 ### FUT-004: Release 0.1 pilot verification
 
 - Former tier: Tier 1, Release critical
 - Completed: 2026-08-10
 - Pull request or commit: [PR #14](https://github.com/mickpletcher/github-account-maintainer/pull/14)
 - Delivered: Added a versioned manifest mapping all ten Release 0.1 gate criteria to evidence; a paginated synthetic account fixture with public and private repositories; end-to-end contract tests for separate credentials, deterministic policy bindings, 14 checks per repository, exact JSON and Markdown contracts, private-name redaction, GET-only requests, complete and partial behavior, and repeated semantic results; a count-only live verifier that enforces minimal detail and hard safety settings; and documented PowerShell and Linux pilot procedures that run locked validation before two through five live audits.
-- Verification: The synthetic repeated pilot passes without exposing the private fixture name in reports or summaries. Partial coverage, unsafe detail, unsafe write configuration, invalid repeat counts, semantic drift, missing configuration, and operational error disclosure fail closed. Ruff, formatting, strict Pyright, 130 pytest tests with 94.11% coverage, lock validation, PowerShell syntax, manifest completeness, and ledger uniqueness pass. A private live pilot was not run because no local configuration exists at the default application path.
+- Verification: The synthetic repeated pilot passes without exposing the private fixture name in reports or summaries. Partial coverage, unsafe detail, unsafe write configuration, invalid repeat counts, semantic drift, missing configuration, and operational error disclosure fail closed. Ruff, formatting, strict Pyright, 130 pytest tests with 94.11% coverage, lock validation, PowerShell syntax, manifest completeness, and ledger uniqueness pass. A private live pilot was not run during PR #14 because no local configuration existed at the default application path. Subsequent count-only verification on 2026-08-10 passed two matching GET-only audits across 73 repositories with zero writes.
 - Replacement idea: FUT-017 versioned release evidence bundles was added to Tier 2.
 
 ### FUT-003: Account audit command and schema reports

@@ -9,7 +9,7 @@ This procedure verifies the Release 0.1 audit foundation against synthetic contr
 - Use a configuration whose `local_data.report_detail` is `minimal`.
 - Store valid discovery and audit credentials for the configured GitHub login.
 - Give the discovery credential repository Metadata read access.
-- Give the audit credential repository Metadata and Contents read access.
+- Give the audit credential repository Metadata, Contents, Administration, and Code scanning alerts read access.
 - Include at least one repository through the configured include and exclude patterns.
 - Do not run while another person or automation is intentionally changing the repositories in scope. The two pilot runs must produce the same semantic result.
 
@@ -34,7 +34,7 @@ The script performs these steps in order:
 5. Runs every unit and synthetic contract test with the coverage gate.
 6. Runs the live account audit twice without saving either detailed report.
 7. Requires both live audits to have complete declared coverage.
-8. Requires at least one in-scope repository and all 14 checks for every in-scope repository.
+8. Requires at least one in-scope repository and all 26 checks for every in-scope repository.
 9. Validates the JSON schema version and required Markdown report sections in memory.
 10. Compares a SHA-256 digest of the two semantic results after removing timestamps and time-derived finding IDs.
 
@@ -75,6 +75,20 @@ uv run python -m github_account_maintainer.pilot --config /private/path/config.y
 ```
 
 Keep the configuration and any separately generated audit reports outside the repository.
+
+## Latest count-only evidence
+
+The expanded private pilot passed on 2026-08-10 after FUT-005 was added:
+
+- two repeated runs;
+- 73 repositories discovered, requested, and audited;
+- 1,898 check results and 2,045 coverage records;
+- 604 findings;
+- matching semantic results;
+- minimal detail and GET-only mode enforced;
+- zero automatic write operations.
+
+This evidence contains no account name, repository identity, URL, credential reference, policy selector, or finding detail. It covers all 26 implemented checks, including explicit unavailable-by-plan handling for private plan restrictions and not-applicable handling for archived code scanning.
 
 ## Gate evidence
 

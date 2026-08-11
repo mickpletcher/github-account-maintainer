@@ -10,6 +10,7 @@ from pydantic import SecretStr
 import github_account_maintainer.pilot as pilot_module
 from github_account_maintainer.account_audit import AccountAuditReport, run_account_audit
 from github_account_maintainer.auth import ClientFactory
+from github_account_maintainer.checks import ALL_CHECKS
 from github_account_maintainer.config import AppConfig, default_config, write_config
 from github_account_maintainer.credentials import CredentialResolutionError, ResolvedCredential
 from github_account_maintainer.github_api import GitHubApiClient
@@ -38,7 +39,7 @@ def test_release_gate_manifest_maps_every_requirement_to_evidence() -> None:
     live_pilot = cast(dict[str, object], manifest["live_pilot"])
 
     assert manifest["schema_version"] == "1.0"
-    assert manifest["status"] == "ready_for_local_pilot"
+    assert manifest["status"] == "live_pilot_passed"
     assert [criterion["id"] for criterion in criteria] == [f"R01-{number:02}" for number in range(1, 11)]
     assert all(cast(list[str], criterion["automated_evidence"]) for criterion in criteria)
     assert live_pilot["minimum_repeats"] == 2
@@ -46,6 +47,10 @@ def test_release_gate_manifest_maps_every_requirement_to_evidence() -> None:
     assert live_pilot["summary_detail"] == "count_only"
     assert live_pilot["request_mode"] == "get_only"
     assert live_pilot["automatic_write_operations"] == []
+    evidence = cast(dict[str, object], live_pilot["latest_evidence"])
+    assert evidence["status"] == "passed"
+    assert evidence["repository_count"] == 73
+    assert evidence["repeated_results_match"] is True
 
 
 def test_release_pilot_repeats_complete_get_only_contract_without_private_output() -> None:
@@ -60,7 +65,7 @@ def test_release_pilot_repeats_complete_get_only_contract_without_private_output
     assert summary.requested_repository_count == 2
     assert summary.audited_repository_count == 2
     assert summary.policy_binding_count == 2
-    assert summary.check_result_count == 28
+    assert summary.check_result_count == 2 * len(ALL_CHECKS)
     assert summary.finding_count >= 3
     assert summary.repeated_results_match is True
     assert summary.minimal_detail_enforced is True
@@ -81,7 +86,7 @@ def test_release_contract_report_is_versioned_deterministic_and_redacted() -> No
     markdown = render_account_audit_markdown(first)
 
     assert first.status is RunStatus.COMPLETE
-    assert len(first.results) == 28
+    assert len(first.results) == 2 * len(ALL_CHECKS)
     assert len(first.bindings) == 2
     assert all(len(binding.policy_hash) == 64 for binding in first.bindings)
     assert [binding.policy_hash for binding in first.bindings] == [binding.policy_hash for binding in second.bindings]
@@ -151,8 +156,8 @@ def test_release_pilot_main_outputs_only_count_summary(
         requested_repository_count=2,
         audited_repository_count=2,
         policy_binding_count=2,
-        check_result_count=28,
-        coverage_record_count=34,
+        check_result_count=2 * len(ALL_CHECKS),
+        coverage_record_count=2 * len(ALL_CHECKS) + 6,
         finding_count=3,
     )
 
@@ -255,6 +260,49 @@ def _handler(requests: list[httpx.Request]) -> Callable[[httpx.Request], httpx.R
             )
         if request.url.path.endswith("/languages"):
             return httpx.Response(200, json=_fixture("classification-languages.json"))
+        if request.url.path.endswith("/rules/branches/main"):
+            return httpx.Response(
+                200,
+                json=[{"type": "pull_request"}, {"type": "required_status_checks"}],
+                headers=_permissions("metadata=read"),
+            )
+        if request.url.path.endswith("/branches/main/protection"):
+            return httpx.Response(
+                200,
+                json={
+                    "required_pull_request_reviews": {"required_approving_review_count": 1},
+                    "required_status_checks": {"contexts": ["validation"], "checks": []},
+                },
+                headers=_permissions("administration=read"),
+            )
+        if request.url.path.endswith("/actions/permissions"):
+            return httpx.Response(
+                200,
+                json={"enabled": True, "allowed_actions": "selected", "sha_pinning_required": True},
+                headers=_permissions("administration=read"),
+            )
+        if request.url.path.endswith("/actions/permissions/workflow"):
+            return httpx.Response(
+                200,
+                json={"default_workflow_permissions": "read", "can_approve_pull_request_reviews": False},
+                headers=_permissions("administration=read"),
+            )
+        if request.url.path.endswith("/vulnerability-alerts"):
+            return httpx.Response(204, headers=_permissions("administration=read"))
+        if request.url.path.endswith("/automated-security-fixes"):
+            return httpx.Response(
+                200,
+                json={"enabled": True, "paused": False},
+                headers=_permissions("administration=read"),
+            )
+        if request.url.path.endswith("/code-scanning/default-setup"):
+            return httpx.Response(
+                200,
+                json={"state": "configured"},
+                headers=_permissions("administration=read"),
+            )
+        if request.url.path.endswith("/private-vulnerability-reporting"):
+            return httpx.Response(200, json={"enabled": True}, headers=_permissions("metadata=read"))
         if request.url.path.endswith("/community/profile"):
             name = (
                 "community-profile-missing.json"
@@ -286,6 +334,13 @@ def _metadata(contract: dict[str, object]) -> dict[str, object]:
     metadata["visibility"] = contract["visibility"]
     metadata["archived"] = False
     metadata["fork"] = False
+    metadata["default_branch"] = "main"
+    metadata["security_and_analysis"] = {
+        "advanced_security": {"status": "enabled"},
+        "code_security": {"status": "enabled"},
+        "secret_scanning": {"status": "enabled"},
+        "secret_scanning_push_protection": {"status": "enabled"},
+    }
     return metadata
 
 

@@ -19,15 +19,11 @@ Priority can change as the project develops. Moving an unimplemented item betwee
 
 These upgrades directly unblock the read-only Release 0.1 gate.
 
-No pending upgrades. The private live pilot is a release operation documented in `RELEASE-0.1-PILOT.md`, not a repository implementation backlog item.
+No pending upgrades. The expanded private live pilot passed and remains documented in `RELEASE-0.1-PILOT.md`; future Release 0.1 reruns are release operations, not repository implementation backlog items.
 
 ## Tier 2: High value
 
 These upgrades broaden useful audit coverage and make repeated audits reliable.
-
-### FUT-005: Settings and security coverage audit
-
-Audit repository settings and enabled security features using explicit supported, inaccessible, not-applicable, and unverified coverage states.
 
 ### FUT-006: Local audit history and finding transitions
 
@@ -56,6 +52,10 @@ Validate stored report schema compatibility across tool versions and provide det
 ### FUT-017: Versioned release evidence bundles
 
 Generate a sanitized release evidence bundle containing the gate-manifest version, lockfile hash, test summary, coverage summary, workflow links, and count-only pilot attestation without detailed repository or finding data.
+
+### FUT-018: Credential capability preflight and token templates
+
+Map enabled checks to required fine-grained token permissions before an audit, report missing capabilities without exposing credentials, and generate no-secret token template links for each declared resource owner.
 
 ## Tier 3: Strategic
 

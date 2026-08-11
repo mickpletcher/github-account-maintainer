@@ -6,5 +6,12 @@
   "language": "Python",
   "visibility": "public",
   "archived": false,
-  "fork": false
+  "fork": false,
+  "default_branch": "main",
+  "security_and_analysis": {
+    "advanced_security": {"status": "enabled"},
+    "code_security": {"status": "enabled"},
+    "secret_scanning": {"status": "enabled"},
+    "secret_scanning_push_protection": {"status": "enabled"}
+  }
 }

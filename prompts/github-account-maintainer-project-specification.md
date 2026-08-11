@@ -1,6 +1,6 @@
 # GitHub Account Maintainer Project Specification
 
-**Status:** Approved product scope; Release 0.1 implementation contract defined
+**Status:** Approved product scope; Release 0.1 live pilot passed; FUT-005 read-only settings and security audit implemented
 **Owner:** Mick Pletcher  
 **Last updated:** 2026-08-10  
 **Repository name:** `github-account-maintainer`  
@@ -10,6 +10,8 @@
 GitHub Account Maintainer is a policy-driven automation system that audits and maintains GitHub resources within explicitly declared API, credential, repository, and plan coverage. It keeps profile pins, repository settings, security controls, About metadata, documentation, social-preview graphics, dependencies, CI workflows, releases, backups, and repository lifecycle state aligned with a configurable standard.
 
 The system is audit-first and fail-closed. It may automatically apply only changes explicitly classified as safe by policy. Repository content changes are proposed through pull requests. Destructive, access-related, billable, or potentially breaking changes require explicit approval and are never silently applied.
+
+The current implementation is GET-only. It runs 26 checks per in-scope repository across metadata, community files, default-branch controls, Actions permissions, and supported security features. The expanded 2026-08-10 count-only pilot passed two matching audits across 73 repositories with 1,898 check results, 2,045 coverage records, 604 findings, and zero writes per run. FUT-005 is complete and live-verified with the documented read-only permissions and explicit plan-aware coverage.
 
 ### Product description
 
@@ -94,7 +96,7 @@ Each inventory records:
 - Repository ownership, effective viewer permission, and whether a configured execution credential can access the repository.
 - Collection start and completion timestamps and any checkpoint used to resume.
 
-Every repository and check receives exactly one coverage state: `audited`, `unsupported`, `unavailable_by_plan`, `inherited`, `inaccessible`, `skipped_by_policy`, `not_requested`, or `failed`. A run is complete only when every requested repository and check has a terminal coverage state. The product must say "complete within declared coverage" rather than "complete account audit."
+Every repository and check receives exactly one coverage state: `audited`, `supported`, `unsupported`, `unavailable_by_plan`, `inherited`, `inaccessible`, `not_applicable`, `unverified`, `skipped_by_policy`, `not_requested`, or `failed`. A run is complete only when every requested repository and check has a terminal coverage state. Requested evidence that is `inaccessible`, `unverified`, or `failed` makes the run partial. The product must say "complete within declared coverage" rather than "complete account audit."
 
 ## 6. Policy Inheritance
 
@@ -250,7 +252,7 @@ GitHub Account Maintainer audits availability and state for:
 - Required status checks and review requirements.
 - Force-push and branch-deletion protections.
 
-The system must distinguish unsupported, unavailable-by-plan, inherited, disabled, and misconfigured states. It must never represent an unavailable feature as a failure.
+The system must distinguish unsupported, unavailable-by-plan, inherited, disabled, and misconfigured states. It must never represent an unavailable feature as a failure, a confirmed disabled feature as unavailable-by-plan, or inaccessible evidence as a verified negative.
 
 ### 12.2 Access inventory
 
@@ -584,7 +586,7 @@ Findings have separate stable check IDs and per-observation finding instance IDs
 
 ### Coverage-aware scoring
 
-Scores are not part of Release 0.1. When introduced, scoring uses versioned weights and includes only checks with comparable audited states in the denominator. `Unsupported`, `unavailable_by_plan`, `inaccessible`, `skipped_by_policy`, `not_requested`, and `failed` results remain visible but do not silently reduce a repository's score. Reports show numerator, denominator, excluded-state counts, scoring-policy version, and enough detail to reproduce the score.
+Scores are not part of Release 0.1. When introduced, scoring uses versioned weights and includes only checks with comparable `audited` or `supported` states in the denominator. `unsupported`, `unavailable_by_plan`, `inaccessible`, `not_applicable`, `unverified`, `skipped_by_policy`, `not_requested`, and `failed` results remain visible but do not silently reduce a repository's score. Reports show numerator, denominator, excluded-state counts, scoring-policy version, and enough detail to reproduce the score.
 
 ## 25. Notifications and Noise Control
 
@@ -617,6 +619,7 @@ All schedules are configurable, timezone aware, and protected from overlapping r
 ### Recommended authentication model
 
 - Use a user-scoped discovery credential to enumerate repositories visible to the configured account. Release 0.1 supports a fine-grained personal access token with documented read permissions and no write permissions.
+- The implemented discovery path requires repository Metadata read access. The complete FUT-005 audit additionally requires repository Contents, Administration, and Code scanning alerts read access. No current command requires a repository write permission.
 - Use GitHub App installation tokens for long-term repository operations when practical. An installation token covers only repositories granted to that installation and is never treated as an account-discovery credential.
 - Use a GitHub App user access token only when an account-level API operation requires user authorization and the app has the corresponding account permission.
 - Separate discovery, read-only audit, write-enabled remediation, browser-session, and optional classic-token capabilities. One credential must not silently substitute for another role.
@@ -823,6 +826,12 @@ social_preview:
   protected_repositories: []
 
 security:
+  audit_branch_protection: true
+  audit_rulesets: true
+  audit_required_reviews: true
+  audit_required_status_checks: true
+  audit_actions_permissions: true
+  audit_actions_workflow_permissions: true
   audit_dependabot: true
   audit_secret_scanning: true
   audit_push_protection: true
@@ -909,7 +918,7 @@ Secrets, credential-store payloads, browser cookies, raw private repository cont
 - Pagination and rate-limit behavior.
 - Permission and plan-dependent feature responses.
 - API-version headers, redirects, ETags, `Retry-After`, primary limits, and secondary-limit responses.
-- `audited`, `unsupported`, `unavailable_by_plan`, `inherited`, `inaccessible`, `skipped_by_policy`, `not_requested`, and `failed` coverage classification.
+- `audited`, `supported`, `unsupported`, `unavailable_by_plan`, `inherited`, `inaccessible`, `not_applicable`, `unverified`, `skipped_by_policy`, `not_requested`, and `failed` coverage classification.
 - Content update conflicts.
 - Pull-request deduplication.
 
@@ -941,13 +950,13 @@ Acceptance is phase-specific. Passing a later-looking demonstration does not wai
 
 ### Release 0.1: Audit foundation gate
 
-Release 0.1 is ready for a local read-only pilot when it can:
+Release 0.1 passed its local read-only pilot after it could:
 
 1. Install reproducibly from the committed `pyproject.toml` and `uv.lock` on supported Windows and Linux test environments.
 2. Run `auth check`, verify the discovery identity and read-only role, and never print or persist the token.
 3. Inventory every repository visible within declared discovery scope with proven pagination and a terminal coverage state for every requested item.
 4. Classify repositories and resolve strict policy deterministically with an explanation trace and stable policy hash.
-5. Run deterministic metadata and community-file checks without cloning private content unnecessarily.
+5. Run 26 deterministic metadata, community-file, repository-settings, and security checks without cloning private content or reading security-alert details.
 6. Produce schema-versioned JSON and Markdown reports with exact coverage, findings, current and desired values, and minimal-detail privacy defaults.
 7. Use only read-only GitHub requests. The Release 0.1 code path contains no enabled mutating adapter and the automatic-write allowlist is empty.
 8. Return the documented exit codes, including code `2` for every partial run.
@@ -958,8 +967,8 @@ Release 0.1 is ready for a local read-only pilot when it can:
 
 Release 0.2 is ready when it additionally:
 
-1. Audits supported repository settings, security features, README evidence, and social-preview validity.
-2. Distinguishes unsupported, unavailable-by-plan, inherited, inaccessible, and failed states through tested API fixtures.
+1. Completes the remaining README-evidence and social-preview validity audits beyond the implemented repository settings and security checks.
+2. Distinguishes supported, unsupported, unavailable-by-plan, inherited, inaccessible, not-applicable, unverified, and failed states through tested API fixtures.
 3. Stores migrated run and finding history without secrets or raw private source content.
 4. Resumes a deliberately interrupted multi-repository audit without duplicating completed work.
 5. Produces a complete-within-declared-coverage audit. Scoring remains disabled unless its separate coverage-aware contract is implemented and tested.
