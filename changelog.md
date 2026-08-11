@@ -6,7 +6,7 @@ This file records every repository change, including code, documentation, config
 
 ### Added
 
-- Added FUT-006 sanitized audit history in a versioned local SQLite database with per-account hashed identity, stable run and finding keys, and new, persistent, resolved, and regressed transitions.
+- Added FUT-006 sanitized audit history in a versioned local SQLite database with per-account hashed identity, report-to-configuration account binding, semantic run and finding keys, and new, persistent, resolved, and regressed transitions.
 - Added the `history` command with count-only JSON and Markdown summaries, a 1 through 100 run limit, default audit recording, the `--no-history` per-run escape, and the persistent `history.enabled` configuration switch.
 - Added numbered transactional forward-only migrations, database integrity checks, readable pre-migration backups for nonempty databases, newer-schema rejection, chronological ordering, duplicate-run idempotency, and fail-closed local path validation.
 - Added repository ignore rules for SQLite databases, journals, write-ahead logs, shared-memory files, and migration-backup directories as defense in depth.

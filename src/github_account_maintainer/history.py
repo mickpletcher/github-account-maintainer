@@ -162,9 +162,11 @@ def history_database_path(config: AppConfig) -> Path:
 def record_audit_history(config: AppConfig, report: AccountAuditReport) -> HistoryWriteResult:
     database_path = history_database_path(config)
     _validate_report_timestamps(report)
+    if report.account_display.casefold() != config.account.login.casefold():
+        raise HistoryError("Audit report account did not match the configured account")
     account_key = _digest(config.account.login.casefold())
-    run_id = _run_id(account_key, report)
     findings = _normalized_findings(report.findings)
+    run_id = _run_id(account_key, report, findings)
 
     try:
         connection = _open_database(database_path, create=True)
@@ -567,7 +569,7 @@ def _finding_state_hash(finding: Finding) -> str:
     )
 
 
-def _run_id(account_key: str, report: AccountAuditReport) -> str:
+def _run_id(account_key: str, report: AccountAuditReport, findings: dict[str, Finding]) -> str:
     return _digest(
         _canonical_json(
             {
@@ -576,6 +578,16 @@ def _run_id(account_key: str, report: AccountAuditReport) -> str:
                 "completed_at": report.completed_at.isoformat(),
                 "tool_version": report.tool_version,
                 "report_schema_version": report.schema_version,
+                "status": report.status.value,
+                "repository_count": report.repository_count,
+                "requested_repository_count": report.requested_repository_count,
+                "audited_repository_count": report.audited_repository_count,
+                "finding_threshold": report.finding_summary.threshold.value,
+                "threshold_met": report.finding_summary.threshold_met,
+                "findings": [
+                    {"finding_key": finding_key, "state_hash": _finding_state_hash(finding)}
+                    for finding_key, finding in sorted(findings.items())
+                ],
             }
         )
     )

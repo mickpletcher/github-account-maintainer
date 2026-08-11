@@ -66,6 +66,8 @@ def test_history_is_idempotent_for_the_same_report(tmp_path: Path) -> None:
     assert duplicate.recorded is False
     assert duplicate.run_id == first.run_id
     assert read_audit_history(config).total_run_count == 1
+    with pytest.raises(HistoryError, match="chronological"):
+        record_audit_history(config, report.model_copy(update={"status": RunStatus.PARTIAL}))
 
 
 def test_history_is_isolated_by_hashed_account_identity(tmp_path: Path) -> None:
@@ -86,6 +88,18 @@ def test_history_is_isolated_by_hashed_account_identity(tmp_path: Path) -> None:
     database_content = history_database_path(first_config).read_bytes()
     assert b"mickpletcher" not in database_content
     assert b"another-account" not in database_content
+
+
+def test_rejects_report_for_a_different_account(tmp_path: Path) -> None:
+    config = history_config(tmp_path)
+    report = report_at(datetime(2026, 8, 11, 12, tzinfo=UTC), RunStatus.COMPLETE, ()).model_copy(
+        update={"account_display": "another-account"}
+    )
+
+    with pytest.raises(HistoryError, match="configured account"):
+        record_audit_history(config, report)
+
+    assert not history_database_path(config).exists()
 
 
 def test_history_database_excludes_private_report_content(tmp_path: Path) -> None:

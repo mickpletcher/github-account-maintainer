@@ -466,7 +466,7 @@ The history report contains run timestamps, complete or partial status, reposito
 
 A partial audit never resolves an absent finding. Missing evidence is not proof that a problem was fixed. The history command returns only sanitized counts and run metadata. It does not return finding evidence, current or desired values, repository names, credential references, URLs, or local file paths.
 
-Runs must be recorded in chronological order. Re-recording the same audit is idempotent and does not duplicate events. The tool rejects a database created by a newer schema. When an older nonempty database needs an upgrade, the tool checks database integrity, creates a timestamped backup under the local state directory, and applies each numbered migration in its own transaction.
+Runs must match the configured account and be recorded in chronological order. Re-recording the same semantic audit is idempotent and does not duplicate events. The tool rejects a database created by a newer schema. When an older nonempty database needs an upgrade, the tool checks database integrity, creates a timestamped backup under the local state directory, and applies each numbered migration in its own transaction.
 
 ## Run the Release 0.1 pilot
 

@@ -52,7 +52,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Case-insensitive include and exclude pattern enforcement with `not_requested` coverage for repositories outside declared audit scope.
 - Configurable finding threshold with severity counts and deterministic exit codes: `0` for a clean complete run, `1` for a complete run at or above threshold, and `2` for partial coverage.
 - Minimal report mode that replaces private and internal repository names with stable numeric labels and removes their URLs.
-- Default sanitized audit-history recording with per-account isolation, deterministic idempotent run IDs, stable finding identities, and chronological ordering.
+- Default sanitized audit-history recording with configured-account binding, per-account isolation, deterministic idempotent semantic run IDs, stable finding identities, and chronological ordering.
 - New, persistent, resolved, and regressed finding transitions, with absent findings resolved only after complete audits.
 - Count-only JSON and Markdown history reports with a configurable 1 through 100 run limit and no GitHub requests.
 - Versioned SQLite schema with numbered transactional forward-only migrations, integrity checks, pre-migration backups for nonempty databases, and newer-schema rejection.
@@ -100,7 +100,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Ruff lint passes.
 - Ruff formatting checks pass.
 - Strict Pyright checks pass with no errors.
-- Pytest passes 149 tests with 93.19% total coverage.
+- Pytest passes 150 tests with 93.20% total coverage.
 - The lockfile is reproducible with `uv lock --check`.
 - GitHub Actions uses read-only permissions, pinned action SHAs, non-persistent checkout credentials, stale-run cancellation, and a job timeout.
 - CodeQL scans Python and GitHub Actions sources.
@@ -123,4 +123,4 @@ Every repository change must update this file and `changelog.md` in the same com
 
 When an upgrade is implemented, move its stable ID from `future-upgrades.md` to `completed-upgrades.md`, record the delivery and verification evidence, and add at least one new upgrade idea to the future backlog in the same pull request.
 
-**Latest assessment change:** Recorded FUT-006 sanitized local SQLite history, transition semantics, migration and path safeguards, the `history` command, and 149-test verification at 93.19% coverage.
+**Latest assessment change:** Recorded FUT-006 sanitized local SQLite history, transition semantics, migration and path safeguards, the `history` command, and 150-test verification at 93.20% coverage.
