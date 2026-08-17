@@ -13,7 +13,7 @@ authors = [{ name = "Mick Pletcher" }]
 dependencies = [
   "httpx>=0.28.1,<1",
   "keyring>=25.6.0,<26",
-  "platformdirs>=4.3.8,<5",
+  "platformdirs>=4.11.3,<5",
   "pydantic>=2.11.7,<3",
   "PyYAML>=6.0.2,<7",
   "typer>=0.16.0,<1",
@@ -27,7 +27,7 @@ dev = [
   "pyright>=1.1.403,<2",
   "pytest>=9.0.3,<10",
   "pytest-cov>=7.1.0,<8",
-  "ruff>=0.12.4,<1",
+  "ruff>=0.16.3,<1",
 ]
 
 [tool.hatch.build.targets.wheel]
