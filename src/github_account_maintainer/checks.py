@@ -464,6 +464,11 @@ def _evaluate_settings_and_security(
             permissions,
             forbidden=branch_forbidden,
         )
+        if rules is not None and any(
+            not isinstance(rule.get("type"), str) or not cast(str, rule["type"]).strip() for rule in rules
+        ):
+            rules = None
+            rules_state = CoverageState.UNVERIFIED
         rules_reviews = _rules_control(rules, "pull_request", _approval_count_present)
         rules_checks = _rules_control(rules, "required_status_checks", _rules_checks_present)
         active_rules = len(rules) if rules is not None else None

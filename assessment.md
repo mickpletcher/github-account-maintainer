@@ -101,7 +101,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Ruff lint passes.
 - Ruff formatting checks pass.
 - Strict Pyright checks pass with no errors.
-- Pytest passes 165 tests with 93.46% total coverage.
+- Pytest passes 173 tests with 93.43% total coverage.
 - The lockfile is reproducible with `uv lock --check`.
 - GitHub Actions uses read-only permissions, pinned action SHAs, non-persistent checkout credentials, stale-run cancellation, and a job timeout.
 - CodeQL scans Python and GitHub Actions sources.
@@ -124,4 +124,4 @@ Every repository change must update this file and `changelog.md` in the same com
 
 When an upgrade is implemented, move its stable ID from `future-upgrades.md` to `completed-upgrades.md`, record the delivery and verification evidence, and add at least one new upgrade idea to the future backlog in the same pull request.
 
-**Latest assessment change:** Consolidated dependency and Actions maintenance, fixed dangling database symlink handling and ineffective branch-control compliance, and added verified README status badges. Required approvals/checks now inspect effective parameters, preserving unverified coverage for malformed evidence. Historical pilot evidence predates these corrections and has not been rerun against a live account.
+**Latest assessment change:** Corrected the late PR #25 review finding: malformed rule types no longer count as active branch controls. Missing, non-string, or blank rule types yield unverified ruleset coverage and a partial audit, while valid classic protection can independently establish branch protection. Eight regression cases failed before the fix; all 173 tests now pass at 93.43% coverage, with Ruff and strict Pyright passing. The upstream AnyIO pytest deprecation warning remains. Historical live-pilot evidence has not been rerun.

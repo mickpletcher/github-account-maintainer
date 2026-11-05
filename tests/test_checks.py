@@ -552,3 +552,27 @@ def test_malformed_classic_checks_are_unverified(requirement: dict[str, object])
     result = _result(_run(handler), "settings.required_status_checks")
     assert result.outcome is CheckOutcome.UNKNOWN
     assert result.coverage_state is CoverageState.UNVERIFIED
+
+
+@pytest.mark.parametrize("rule", cast(list[dict[str, object]], [{}, {"type": 123}, {"type": ""}, {"type": " "}]))
+@pytest.mark.parametrize("classic_protected", [False, True])
+def test_malformed_rule_types_cannot_establish_protection(rule: dict[str, object], classic_protected: bool) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/rules/branches/main"):
+            return httpx.Response(200, json=[rule])
+        if request.url.path.endswith("/branches/main/protection") and not classic_protected:
+            return httpx.Response(404)
+        return _response_for_complete_fixture(request)
+
+    report = _run(handler)
+    rulesets = _result(report, "settings.rulesets")
+    assert rulesets.outcome is CheckOutcome.UNKNOWN
+    assert rulesets.coverage_state is CoverageState.UNVERIFIED
+    assert rulesets.current_state == {"active_rule_count": None}
+    protection = _result(report, "settings.branch_protection")
+    if classic_protected:
+        assert protection.outcome is CheckOutcome.COMPLIANT
+    else:
+        assert protection.outcome is CheckOutcome.UNKNOWN
+        assert protection.coverage_state is CoverageState.UNVERIFIED
+    assert report.status is RunStatus.PARTIAL

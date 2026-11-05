@@ -10,6 +10,8 @@ This file records every repository change, including code, documentation, config
 
 ### Fixed
 
+- Reject missing, non-string, and blank ruleset rule types before counting active rules. Malformed responses now yield unverified ruleset coverage instead of false compliance; independently verified classic protection remains usable.
+
 - Reject dangling history database symlinks before either reading or creating SQLite state, with regression coverage that verifies targets remain untouched.
 - Inspect effective approval counts and named required checks instead of treating empty branch-protection rules as compliant. Malformed control evidence remains unverified.
 
