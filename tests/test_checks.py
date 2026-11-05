@@ -496,3 +496,59 @@ def _fixture(name: str) -> object:
 
 def _permission_header(value: str | None) -> dict[str, str]:
     return {"X-Accepted-GitHub-Permissions": value} if value else {}
+
+
+@pytest.mark.parametrize("source", ["classic", "ruleset"])
+@pytest.mark.parametrize("enabled", [False, True, None])
+def test_branch_controls_require_effective_parameters(source: str, enabled: bool | None) -> None:
+    reviews = {} if enabled is None else {"required_approving_review_count": int(enabled)}
+    checks = {} if enabled is None else {"required_status_checks": [{"context": "validate"}] if enabled else []}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/rules/branches/main"):
+            return httpx.Response(
+                200,
+                json=[
+                    {"type": "pull_request", "parameters": reviews},
+                    {"type": "required_status_checks", "parameters": checks},
+                ]
+                if source == "ruleset"
+                else [],
+            )
+        if request.url.path.endswith("/branches/main/protection"):
+            return (
+                httpx.Response(
+                    200,
+                    json={
+                        "required_pull_request_reviews": reviews,
+                        "required_status_checks": {"contexts": ["validate"] if enabled else [], "checks": []},
+                    },
+                )
+                if source == "classic"
+                else httpx.Response(404)
+            )
+        return _response_for_complete_fixture(request)
+
+    report = _run(handler)
+    expected = (
+        CheckOutcome.UNKNOWN if enabled is None else CheckOutcome.COMPLIANT if enabled else CheckOutcome.NONCOMPLIANT
+    )
+    assert _result(report, "settings.required_reviews").outcome is expected
+    if source == "ruleset" or enabled is not None:
+        assert _result(report, "settings.required_status_checks").outcome is expected
+
+
+@pytest.mark.parametrize(
+    "requirement", cast(list[dict[str, object]], [{"contexts": [None]}, {"checks": [{}]}, {"contexts": "validate"}])
+)
+def test_malformed_classic_checks_are_unverified(requirement: dict[str, object]) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/rules/branches/main"):
+            return httpx.Response(200, json=[])
+        if request.url.path.endswith("/branches/main/protection"):
+            return httpx.Response(200, json={"required_status_checks": requirement})
+        return _response_for_complete_fixture(request)
+
+    result = _result(_run(handler), "settings.required_status_checks")
+    assert result.outcome is CheckOutcome.UNKNOWN
+    assert result.coverage_state is CoverageState.UNVERIFIED

@@ -464,7 +464,8 @@ def _evaluate_settings_and_security(
             permissions,
             forbidden=branch_forbidden,
         )
-        rule_types: set[str] = _rule_types(rules) if rules is not None else set()
+        rules_reviews = _rules_control(rules, "pull_request", _approval_count_present)
+        rules_checks = _rules_control(rules, "required_status_checks", _rules_checks_present)
         active_rules = len(rules) if rules is not None else None
         branch_values["settings.rulesets"] = (
             active_rules is not None and active_rules > 0,
@@ -481,19 +482,15 @@ def _evaluate_settings_and_security(
                 "active_rule_count": active_rules,
             },
         )
-        classic_reviews = (
-            _object_present(protection, "required_pull_request_reviews")
-            if protection_state is CoverageState.SUPPORTED
-            else None
-        )
+        classic_reviews = _required_reviews_present(protection) if protection_state is CoverageState.SUPPORTED else None
         branch_values["settings.required_reviews"] = _combined_branch_control(
             protection_state,
             classic_reviews,
             rules_state,
-            "pull_request" in rule_types,
+            rules_reviews,
             {
                 "classic_requirement": classic_reviews,
-                "ruleset_requirement": "pull_request" in rule_types if rules is not None else None,
+                "ruleset_requirement": rules_reviews,
             },
         )
         classic_checks = (
@@ -503,10 +500,10 @@ def _evaluate_settings_and_security(
             protection_state,
             classic_checks,
             rules_state,
-            "required_status_checks" in rule_types,
+            rules_checks,
             {
                 "classic_requirement": classic_checks,
-                "ruleset_requirement": "required_status_checks" in rule_types if rules is not None else None,
+                "ruleset_requirement": rules_checks,
             },
         )
 
@@ -844,48 +841,80 @@ def _get_enabled_endpoint(
         return None, CoverageState.FAILED
 
 
-def _rule_types(rules: list[JsonObject] | None) -> set[str]:
-    if rules is None:
-        return set()
-    types: set[str] = set()
-    for rule in rules:
-        rule_type = rule.get("type")
-        if not isinstance(rule_type, str):
-            raise TypeError("GitHub branch rule did not contain a valid type")
-        types.add(rule_type)
-    return types
+def _approval_count_present(parameters: JsonObject) -> bool | None:
+    count = parameters.get("required_approving_review_count")
+    if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+        return None
+    return count > 0
 
 
-def _object_present(payload: JsonObject | None, key: str) -> bool | None:
-    if payload is None:
+def _required_reviews_present(payload: JsonObject | None) -> bool | None:
+    if payload is None or payload.get("required_pull_request_reviews") is None:
         return False
-    value = payload.get(key)
-    return isinstance(value, dict)
+    value = payload["required_pull_request_reviews"]
+    return _approval_count_present(cast(JsonObject, value)) if isinstance(value, dict) else None
+
+
+def _rules_checks_present(parameters: JsonObject) -> bool | None:
+    checks = parameters.get("required_status_checks")
+    if not isinstance(checks, list):
+        return None
+    for check in cast(list[JsonValue], checks):
+        if not isinstance(check, dict) or not isinstance(check.get("context"), str) or not check["context"]:
+            return None
+    return bool(cast(list[JsonValue], checks))
+
+
+def _rules_control(
+    rules: list[JsonObject] | None, rule_type: str, evaluate: Callable[[JsonObject], bool | None]
+) -> bool | None:
+    if rules is None:
+        return None
+    values: list[bool | None] = []
+    for rule in rules:
+        if rule.get("type") == rule_type:
+            parameters = rule.get("parameters")
+            values.append(evaluate(cast(JsonObject, parameters)) if isinstance(parameters, dict) else None)
+        elif not isinstance(rule.get("type"), str):
+            values.append(None)
+    if True in values:
+        return True
+    return None if None in values else False
 
 
 def _required_status_checks_present(payload: JsonObject | None) -> bool | None:
     if payload is None:
         return False
     value = payload.get("required_status_checks")
-    if not isinstance(value, dict):
+    if value is None:
         return False
+    if not isinstance(value, dict):
+        return None
     values = cast(JsonObject, value)
     contexts = values.get("contexts", [])
     checks = values.get("checks", [])
     if not isinstance(contexts, list) or not isinstance(checks, list):
         return None
-    return bool(cast(list[object], contexts) or cast(list[object], checks))
+    context_values = cast(list[JsonValue], contexts)
+    if any(not isinstance(context, str) or not context for context in context_values):
+        return None
+    check_value = _rules_checks_present({"required_status_checks": cast(list[JsonValue], checks)})
+    return None if check_value is None else bool(context_values) or check_value
 
 
 def _combined_branch_control(
     classic_state: CoverageState,
     classic_value: bool | None,
     rules_state: CoverageState,
-    rules_value: bool,
+    rules_value: bool | None,
     current: JsonValue,
 ) -> tuple[bool | None, CoverageState, JsonValue]:
     if classic_value is True or (rules_state is CoverageState.SUPPORTED and rules_value):
         return True, CoverageState.SUPPORTED, current
+    if classic_state is CoverageState.SUPPORTED and classic_value is None:
+        return None, CoverageState.UNVERIFIED, current
+    if rules_state is CoverageState.SUPPORTED and rules_value is None:
+        return None, CoverageState.UNVERIFIED, current
     if classic_state is CoverageState.SUPPORTED and rules_state in {
         CoverageState.SUPPORTED,
         CoverageState.UNSUPPORTED,

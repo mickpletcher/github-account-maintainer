@@ -4,6 +4,23 @@ This file records every repository change, including code, documentation, config
 
 ## Unreleased
 
+### Security
+
+- Updated certifi to 2026.10.18 to remove compromised emSign roots (GHSA-6q48-6c7w-9gw2), preserving the security update from PR #24.
+
+### Fixed
+
+- Reject dangling history database symlinks before either reading or creating SQLite state, with regression coverage that verifies targets remain untouched.
+- Inspect effective approval counts and named required checks instead of treating empty branch-protection rules as compliant. Malformed control evidence remains unverified.
+
+### Changed
+
+- Consolidated the Python dependency updates from PR #23 and pinned GitHub Actions updates from PR #22 into the tested maintenance change.
+
+### Documentation
+
+- Added README badges for the actual CI and CodeQL workflows, supported Python version, and MIT license; refreshed the assessment and verification evidence.
+
 ### Added
 
 - Added FUT-006 sanitized audit history in a versioned local SQLite database with GitHub-host-and-account hashed identity, report-to-configuration account binding, semantic run and finding keys, coverage-aware resolution, and new, persistent, resolved, and regressed transitions.
