@@ -405,3 +405,25 @@ def create_v1_database(path: Path) -> None:
             (version, name, datetime(2026, 8, 11, 12, tzinfo=UTC).isoformat()),
         )
         connection.execute(f"PRAGMA user_version = {version}")
+
+
+@pytest.mark.parametrize("target_exists", [False, True])
+def test_rejects_database_symlinks_without_modifying_target(tmp_path: Path, target_exists: bool) -> None:
+    config = history_config(tmp_path)
+    target = tmp_path / "other.sqlite3"
+    if target_exists:
+        target.write_bytes(b"leave this file untouched")
+    database = history_database_path(config)
+    database.symlink_to(target)
+    timestamp = datetime(2026, 8, 11, 12, tzinfo=UTC)
+
+    with pytest.raises(HistoryError, match="not a regular file"):
+        record_audit_history(config, report_at(timestamp, RunStatus.COMPLETE, ()))
+    with pytest.raises(HistoryError, match="not a regular file"):
+        read_audit_history(config)
+
+    assert database.is_symlink()
+    if target_exists:
+        assert target.read_bytes() == b"leave this file untouched"
+    else:
+        assert not target.exists()

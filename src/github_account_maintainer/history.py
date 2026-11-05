@@ -184,6 +184,8 @@ def read_audit_history(config: AppConfig, *, limit: int = 20) -> AuditHistoryRep
     if not 1 <= limit <= 100:
         raise ValueError("history limit must be between 1 and 100")
     database_path = history_database_path(config)
+    if database_path.is_symlink():
+        raise HistoryError("Audit history database is not a regular file")
     if not database_path.exists():
         return AuditHistoryReport(schema_version=0, total_run_count=0, returned_run_count=0)
     if database_path.is_symlink() or not database_path.is_file():
@@ -227,7 +229,7 @@ def read_audit_history(config: AppConfig, *, limit: int = 20) -> AuditHistoryRep
 
 
 def _open_database(path: Path, *, create: bool) -> sqlite3.Connection:
-    if path.exists() and (path.is_symlink() or not path.is_file()):
+    if path.is_symlink() or (path.exists() and not path.is_file()):
         raise HistoryError("Audit history database is not a regular file")
     if not path.exists() and not create:
         raise HistoryError("Audit history database does not exist")

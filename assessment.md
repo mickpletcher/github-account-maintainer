@@ -1,6 +1,6 @@
 # GitHub Account Maintainer Assessment
 
-**Last reviewed:** 2026-08-11
+**Last reviewed:** 2026-11-05
 **Current release:** `0.1.0.dev0`  
 **Overall status:** The read-only account audit implements 26 metadata, community, repository-settings, and security checks. FUT-006 adds sanitized versioned SQLite history with new, persistent, resolved, and regressed finding transitions. The expanded Release 0.1 private pilot passed two matching GET-only runs across 73 repositories with complete declared coverage and zero GitHub writes.
 
@@ -101,7 +101,7 @@ The implemented GitHub path is serial and GET-only. It cannot modify repositorie
 - Ruff lint passes.
 - Ruff formatting checks pass.
 - Strict Pyright checks pass with no errors.
-- Pytest passes 154 tests with 93.27% total coverage.
+- Pytest passes 165 tests with 93.46% total coverage.
 - The lockfile is reproducible with `uv lock --check`.
 - GitHub Actions uses read-only permissions, pinned action SHAs, non-persistent checkout credentials, stale-run cancellation, and a job timeout.
 - CodeQL scans Python and GitHub Actions sources.
@@ -124,4 +124,4 @@ Every repository change must update this file and `changelog.md` in the same com
 
 When an upgrade is implemented, move its stable ID from `future-upgrades.md` to `completed-upgrades.md`, record the delivery and verification evidence, and add at least one new upgrade idea to the future backlog in the same pull request.
 
-**Latest assessment change:** Recorded FUT-006 sanitized local SQLite history, coverage-aware transition semantics, host/account isolation, migration and path safeguards, the `history` command, and 154-test verification at 93.27% coverage.
+**Latest assessment change:** Consolidated dependency and Actions maintenance, fixed dangling database symlink handling and ineffective branch-control compliance, and added verified README status badges. Required approvals/checks now inspect effective parameters, preserving unverified coverage for malformed evidence. Historical pilot evidence predates these corrections and has not been rerun against a live account.

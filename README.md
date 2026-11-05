@@ -1,5 +1,10 @@
 # GitHub Account Maintainer
 
+[![CI](https://github.com/mickpletcher/github-account-maintainer/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mickpletcher/github-account-maintainer/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/mickpletcher/github-account-maintainer/actions/workflows/github-code-scanning/codeql/badge.svg?branch=main)](https://github.com/mickpletcher/github-account-maintainer/actions/workflows/github-code-scanning/codeql)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 GitHub Account Maintainer is a local command-line tool for inspecting the GitHub repositories your account can access. It is being built to compare those repositories with an explicit policy and report what is correct, missing, unsupported, or inaccessible.
 
 The current version is deliberately read-only. It can verify GitHub identities, inventory and classify repositories, redact private repository identities, bind classifications to layered policy, audit metadata, community files, repository settings, and security features, aggregate an account audit, and retain sanitized local finding history. It cannot change GitHub.
